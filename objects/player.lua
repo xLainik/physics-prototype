@@ -12,7 +12,7 @@ local function newPlayer(x, y)
     self.angle = 0
 
     --Physics
-    self.body = love.physics.newBody(WORLD, x, y, "dynamic")
+    self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
     self.body:setMass(4)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
@@ -53,12 +53,14 @@ function Player:update(dt)
 
     self.body:applyForce(math.cos(self.angle) * force, math.sin(self.angle) * force)
 
+    self.x, self.y = self.body:getX(), self.body:getY()
+
 end
 
 function Player:debugDraw()
     love.graphics.setColor(0.9, 0.8, 0.9)
     love.graphics.setLineWidth(2)
-    love.graphics.circle("line", self.body:getX(),self.body:getY(), self.shape:getRadius(), 12)
+    love.graphics.circle("line", self.x, self.y, self.radius, 6)
 end
 
 function Player:setPosition(x, y)

@@ -4,11 +4,14 @@ function love.load()
 	--Love2d load
 	WORLD = love.physics.newWorld(0, 0, true)
 
-	newPlayer = require("objects/player")
-	newTile = require("objects/tile")
-	newCircle = require("objects/circle")
+	local newPlayer = require("objects/player")
+	local newEnemy = require("objects/enemy")
+	local newTile = require("objects/tile")
+	local newCircle = require("objects/circle")
 
 	player_1 = newPlayer(400, 100)
+
+	enemy_1 = newEnemy(900, 300)
 
 	circle_1 = newCircle(30, 30)
 
@@ -28,6 +31,7 @@ function love.update(dt)
 	--Love2d update
 	WORLD:update(dt)
 	player_1:update(dt)
+	enemy_1:update(dt)
 	circle_1:update(dt)
 
 	if love.keyboard.isDown("r") then
@@ -42,14 +46,22 @@ function love.update(dt)
 end
 
 function love.draw(dt)
-	--Love2d draw
-	love.graphics.clear(0.05, 0.0, 0.05)
-	player_1:debugDraw()
-	circle_1:debugDraw()
 
+	love.graphics.clear(0.05, 0.0, 0.05)
+
+	-- Terrain draw
 	for i, tile in pairs(tiles) do
 		tile:debugDraw()
 	end
+
+	-- Entities draw
+	enemy_1:debugDraw()
+	player_1:debugDraw()
+	
+	-- GUI draw
+	circle_1:debugDraw()
+
+
 
 	love.graphics.print("FPS: "..tostring(fps), 10, 10)
 end

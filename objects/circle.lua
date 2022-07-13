@@ -146,6 +146,7 @@ end
 
 function Circle:debugDraw()
 	if self.active then
+		love.graphics.setColor(0.9, 0.8, 0.9)
 		love.graphics.circle("line", self.center_x, self.center_y, self.radius, self.polygon_size)
 		love.graphics.setLineWidth(2)
 		love.graphics.line(self.center_x,self.center_y, self.cursor_x,self.cursor_y)
