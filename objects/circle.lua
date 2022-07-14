@@ -85,7 +85,7 @@ end
 
 function Circle:update(dt)
 
-	if love.mouse.isDown(1) and self.active == false then
+	if love.mouse.isDown(2) and self.active == false then
 		self:spawn()
 		--love.mouse.setRelativeMode(true)
 	end
@@ -130,7 +130,7 @@ function Circle:update(dt)
 		end
     end
 
-    if self.active and love.mouse.isDown(1) == false then
+    if self.active and love.mouse.isDown(2) == false then
 		--if spell is correct, spawn said spell
 		print("Input: "..table.concat(self.node_buffer, ","))
 		self:checkSpells()
@@ -142,6 +142,7 @@ function Circle:update(dt)
 
 		--love.mouse.setRelativeMode(false)
 	end
+
 end
 
 function Circle:debugDraw()
@@ -162,8 +163,8 @@ function Circle:debugDraw()
 			-- end
 		end
 		love.graphics.points(self.node_buffer_draw)
-		love.graphics.setColor(0.9, 0.2, 0.4)
-		love.graphics.points({{self.cursor_x, self.cursor_y}})
+		--love.graphics.setColor(0.9, 0.2, 0.4)
+		--love.graphics.points({{self.cursor_x, self.cursor_y}})
     end
 end
 

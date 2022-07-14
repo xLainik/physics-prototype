@@ -1,8 +1,10 @@
 local Player = {}
 Player.__index = Player
 
-local function newPlayer(x, y)
+local function newPlayer(x, y, cursor)
     local self = setmetatable({}, Player)
+
+    self.cursor = cursor
 
     --Position of the circle center
     self.x = x or 50
@@ -21,6 +23,22 @@ local function newPlayer(x, y)
     --self.body:setInertia(0)
     self.fixture:setFriction(1.0)
 
+    -- Fixture Category and Mask
+    self.fixture:setCategory(2)
+    self.fixture:setMask()
+    self.fixture:setUserData(self)
+
+    --2 -> Player
+    --3 -> Enemies 1
+    --4 -> Enemies 2
+    --5 -> Enemies 3
+    --6 -> Player attacks 1
+    --7 -> Player attacks 2
+    --8 -> Enemy attacks 1
+    --9 -> Enemy attacks 2
+    --10 -> Unbreakable terrain
+    --11 -> Breakable terrain
+
     return self
 end
 
@@ -29,6 +47,7 @@ function Player:update(dt)
     local force = 1200
 
     -- Input handling
+    -- Keyboard Input
     if love.keyboard.isDown("a") and love.keyboard.isDown("w") then
       self.angle = math.pi*1.25
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("w")then
@@ -47,8 +66,13 @@ function Player:update(dt)
         self.angle = math.pi*0.50
     else
         force = 0
-        --when the key is released, the body sets still instanly
+        --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
+    end
+
+    -- Mouse Input
+    if self.cursor:click() then
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, 10, 750, getAngle(self.x,self.y, self.cursor.x, self.cursor.y)}})
     end
 
     self.body:applyForce(math.cos(self.angle) * force, math.sin(self.angle) * force)
@@ -65,6 +89,10 @@ end
 
 function Player:setPosition(x, y)
     self.body:setPosition(x, y)
+end
+
+function Player:gotHit(entity, xn, yn)
+    print("Player got hit")
 end
 
 return newPlayer

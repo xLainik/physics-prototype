@@ -15,6 +15,10 @@ local function newTile(x, y, width, height)
     self.shape = love.physics.newRectangleShape(self.width, self.height)
     self.fixture = love.physics.newFixture(self.body, self.shape)
 
+    -- Fixture Category and Mask
+    self.fixture:setCategory(10)
+    self.fixture:setUserData(self)
+
     return self
 end
 
@@ -25,6 +29,10 @@ end
 function Tile:debugDraw()
     love.graphics.setColor(0.85, 0.85, 0.9)
     love.graphics.polygon("fill", self.body:getWorldPoints(self.shape:getPoints()))
+end
+
+function Tile:gotHit(entity, xn, yn)
+    --print("Tile got hit")
 end
 
 return newTile

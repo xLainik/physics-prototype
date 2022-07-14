@@ -46,6 +46,11 @@ local function newEnemy(x, y)
         hitList = {}
     }
 
+    -- Fixture Category and Mask
+    self.fixture:setCategory(3)
+    self.fixture:setMask(2)
+    self.fixture:setUserData(self)
+
     return self
 end
 
@@ -61,13 +66,13 @@ function Enemy:worldRayCastCallback(fixture, x, y, xn, yn, fraction)
 end
 
 function Enemy:onenteridle()
-    print("onenteridle")
+    --print("onenteridle")
     self.body:setLinearVelocity(0, 0)
     self.idle_timer = 0
 end
 
 function Enemy:onenterwandering()
-    print("onenterwandering")
+    --print("onenterwandering")
     self.speed = 16
     self.angle = math.random(0, 2*math.pi)
     self.body:setLinearVelocity(math.cos(self.angle)*self.speed, math.sin(self.angle)*self.speed)
@@ -82,7 +87,7 @@ function Enemy:update(dt)
         self.idle_timer = self.idle_timer + dt
         if self.idle_timer > 4 then
             self.state_machine:wander()
-            print("transition: wander")
+            --print("transition: wander")
 
         end
     elseif self.state_machine:is("wandering") then
@@ -93,7 +98,7 @@ function Enemy:update(dt)
 
         if self.wander_timer > 12 then
             self.state_machine:calmdown()
-            print("transition: calmdown")
+            --print("transition: calmdown")
         end
     end
 
@@ -105,7 +110,7 @@ function Enemy:update(dt)
     self.Ray.x2, self.Ray.y2 = self.x - 400, self.y
     
     -- Cast the ray and populate the hitList table.
-    WORLD:rayCast(self.Ray.x1, self.Ray.y1, self.Ray.x2, self.Ray.y2, function(fixture, x, y, xn, yn, fraction) self:worldRayCastCallback(fixture, x, y, xn, yn, fraction) return 0 end)
+    WORLD:rayCast(self.Ray.x1, self.Ray.y1, self.Ray.x2, self.Ray.y2, function(fixture, x, y, xn, yn, fraction) self:worldRayCastCallback(fixture, x, y, xn, yn, fraction) return 1 end)
 
     -- for i, hit in ipairs(self.Ray.hitList) do
     --     print(i, hit.x, hit.y, hit.xn, hit.xy, hit.fraction)
@@ -127,7 +132,7 @@ function Enemy:debugDraw()
     -- Drawing the intersection points and normal vectors if there were any.
     for i, hit in ipairs(self.Ray.hitList) do
         love.graphics.setColor(255, 0, 0)
-        --love.graphics.print(i, hit.x, hit.y) -- Prints the hit order besides the point.
+        love.graphics.print(i, hit.x, hit.y) -- Prints the hit order besides the point.
         love.graphics.circle("line", hit.x, hit.y, 3)
         love.graphics.setColor(0, 255, 0)
         love.graphics.line(hit.x, hit.y, hit.x + hit.xn * 25, hit.y + hit.yn * 25)
@@ -136,6 +141,10 @@ end
 
 function Enemy:setPosition(x, y)
     self.body:setPosition(x, y)
+end
+
+function Enemy:gotHit(entity, xn, yn)
+    print("Enemy got hit")
 end
 
 return newEnemy
