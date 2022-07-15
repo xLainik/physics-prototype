@@ -1,14 +1,16 @@
 local Player = {}
 Player.__index = Player
 
-local function newPlayer(x, y, cursor)
+local function newPlayer(x, y, z, model, cursor)
     local self = setmetatable({}, Player)
 
     self.cursor = cursor
+    self.model = model
 
     --Position of the circle center
     self.x = x or 50
     self.y = y or 50
+    self.z = z or 0
     self.radius = 20
 
     self.angle = 0
@@ -70,6 +72,12 @@ function Player:update(dt)
         self.body:setLinearVelocity(0 , 0)
     end
 
+    if love.keyboard.isDown("space") then
+        self.z = self.z + 500*dt
+    elseif love.keyboard.isDown("lshift") then
+        self.z = self.z - 500*dt
+    end
+
     -- Mouse Input
     if self.cursor:click() then
         table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, 10, 750, getAngle(self.x,self.y, self.cursor.x, self.cursor.y)}})
@@ -87,12 +95,17 @@ function Player:debugDraw()
     love.graphics.circle("line", self.x, self.y, self.radius, 6)
 end
 
+function Player:draw(shader, camera, shadow_map)
+    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    self.model:draw(nil, camera, false)
+end
+
 function Player:setPosition(x, y)
     self.body:setPosition(x, y)
 end
 
 function Player:gotHit(entity, xn, yn)
-    print("Player got hit")
+    --print("Player got hit")
 end
 
 return newPlayer

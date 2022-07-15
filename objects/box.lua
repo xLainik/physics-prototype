@@ -1,12 +1,15 @@
-local Tile = {}
-Tile.__index = Tile
+local Box = {}
+Box.__index = Box
 
-local function newTile(x, y, width, height)
-    local self = setmetatable({}, Tile)
+local function newBox(x, y, z, width, height, model)
+    local self = setmetatable({}, Box)
+
+    self.model = model
 
     --Position of the rectangle center
     self.x = x + width/2 or 50
     self.y = y + height/2 or 50
+    self.z = z or 0
     self.width = width or 50
     self.height = height or 50
 
@@ -22,17 +25,22 @@ local function newTile(x, y, width, height)
     return self
 end
 
-function Tile:update(dt)
+function Box:update(dt)
     --pass
 end
 
-function Tile:debugDraw()
+function Box:debugDraw()
     love.graphics.setColor(0.85, 0.85, 0.9)
     love.graphics.polygon("fill", self.body:getWorldPoints(self.shape:getPoints()))
 end
 
-function Tile:gotHit(entity, xn, yn)
-    --print("Tile got hit")
+function Box:draw(shader, camera, shadow_map)
+    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    self.model:draw(nil, camera, false)
 end
 
-return newTile
+function Box:gotHit(entity, xn, yn)
+    --print("Box got hit")
+end
+
+return newBox
