@@ -21,14 +21,12 @@ local function newCamera(aspectRatio)
     self.position = {0,0,0}
     self.target = {1,0,0}
     self.up = {0,0,1}
-    self.radius = 3
-    self.angle_x = math.pi*1.5
-    self.angle_z = math.pi*0.25
+    self.radius = 12
     self.viewMatrix = newMatrix()
     self.projectionMatrix = newMatrix()
     
-    self.direction = 0
-    self.pitch = 0
+    self.direction = -0.5*math.pi
+    self.pitch = 0.25*math.pi
 
     return self
 end
@@ -105,16 +103,12 @@ function camera:thirdPersonLook(dx, dy, player_x, player_y, player_z)
 
     local sensitivity = 1/400
 
-    self.angle_x = self.angle_x + dx*sensitivity
-    self.angle_z = math.max(math.min(self.angle_z + dy*sensitivity, math.pi*0.5), math.pi*-0.5)
+    self.direction = self.direction + dx*sensitivity
+    self.pitch = math.max(math.min(self.pitch - dy*sensitivity, math.pi*0.5), math.pi*-0.5)
 
-    if love.keyboard.isDown("t") then
-        print(self.angle_z/math.pi*180)
-    end
-
-    self.position[1] = player_x + math.cos(self.angle_x)*math.cos(self.angle_z)*self.radius
-    self.position[2] = player_y + math.sin(self.angle_x)*math.cos(self.angle_z)*self.radius
-    self.position[3] = player_z + math.sin(self.angle_z)*self.radius
+    self.position[1] = player_x + math.cos(self.direction)*math.cos(self.pitch)*self.radius
+    self.position[2] = player_y + math.sin(self.direction)*math.cos(self.pitch)*self.radius
+    self.position[3] = player_z + math.sin(self.pitch)*self.radius
 
     --Equivalent code might be:
     --camera.lookAt(camera.position[1],camera.position[2],camera.position[3], player_x, player_y, player_z)
@@ -123,9 +117,6 @@ function camera:thirdPersonLook(dx, dy, player_x, player_y, player_z)
     self.target[2] = player_y
     self.target[3] = player_z
 
-    self.direction = math.pi/2 - self.angle_x
-    self.pitch = self.angle_z
-
     self:updateViewMatrix()
 
     --But changing the parameters directly is faster
@@ -133,33 +124,28 @@ end
 
 function camera:thirdPersonMovement(dt, player_x, player_y, player_z)
 
-    --print("camera"..camera.position[1]..", "..camera.position[2])
-
     if love.keyboard.isDown("left") then
-        self.angle_x = self.angle_x - math.pi/2*dt
+        self.direction = self.direction - math.pi/2*dt
     elseif love.keyboard.isDown("right") then
-        self.angle_x = self.angle_x + math.pi/2*dt
+        self.direction = self.direction + math.pi/2*dt
     end
 
     if love.keyboard.isDown("down") then
-        self.angle_z = math.max(math.min(self.angle_z - math.pi/2*dt, math.pi*0.5), math.pi*-0.5)
+        self.pitch = math.max(math.min(self.pitch - math.pi/2*dt, math.pi*0.5), math.pi*-0.5)
     elseif love.keyboard.isDown("up") then
-        self.angle_z = math.max(math.min(self.angle_z + math.pi/2*dt, math.pi*0.5), math.pi*-0.5)
+        self.pitch = math.max(math.min(self.pitch + math.pi/2*dt, math.pi*0.5), math.pi*-0.5)
     end
 
-    self.position[1] = player_x + math.cos(self.angle_x)*math.cos(self.angle_z)*self.radius
-    self.position[2] = player_y + math.sin(self.angle_x)*math.cos(self.angle_z)*self.radius
-    self.position[3] = player_z + math.sin(self.angle_z)*self.radius
+    self.position[1] = player_x + math.cos(self.direction)*math.cos(self.pitch)*self.radius
+    self.position[2] = player_y + math.sin(self.direction)*math.cos(self.pitch)*self.radius
+    self.position[3] = player_z + math.sin(self.pitch)*self.radius
 
     --Equivalent code might be:
     --camera.lookAt(camera.position[1],camera.position[2],camera.position[3], player_x, player_y, player_z)
 
-    self.target[1] = player_x + 0.3 --add the player.w/2
-    self.target[2] = player_y + 0.3 --add the player.h/2
-    self.target[3] = player_z + 0.25 --add the player.d/2
-
-    self.direction = math.pi/2 - self.angle_x
-    self.pitch = self.angle_z
+    self.target[1] = player_x
+    self.target[2] = player_y
+    self.target[3] = player_z
 
     self:updateViewMatrix()
 

@@ -54,5 +54,8 @@ function Projectile:gotHit(entity, xn, yn)
     --print("Projectile got hit")
     self.active = false
 end
+function Projectile:exitHit(entity, xn, yn)
+    --print("Projectile exited a collision")
+end
 
 return newProjectile
