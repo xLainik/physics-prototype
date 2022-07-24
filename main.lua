@@ -36,7 +36,7 @@ function love.load()
     current_camera = main_camera
 
     --3d models
-    player_model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, {7/8,7/8,1.7})
+    player_model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, {7/8,7/8,1.5})
 
     myShader_code = love.filesystem.read("shaders/test_shader_6.glsl")
     myShader = love.graphics.newShader(myShader_code)
@@ -143,7 +143,6 @@ function love.load()
 end
 
 function love.update(dt)
-
 	--General Inputs
 	if love.keyboard.isDown("r") then
 		love.event.quit("restart")
@@ -216,7 +215,7 @@ function love.update(dt)
 	light_camera:lookAt(player_1.x/SCALE3D.x+LIGHTVECTOR.x*DISTLIGHTCAM, player_1.y/SCALE3D.y+LIGHTVECTOR.y*DISTLIGHTCAM, player_1.z/SCALE3D.z+LIGHTVECTOR.z*DISTLIGHTCAM, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 
     current_camera:thirdPersonMovement(dt, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
-    
+
     --light_camera.position = {main_camera.position[1]+2, main_camera.position[2], main_camera.position[3]}
     --light_camera.target = main_camera.target
 

@@ -42,17 +42,8 @@ end
 
 function Shadow:gotHit(entity)
     --print("Shadow got hit")
-    local hash = {}
-    local res = {}
     table.insert(self.floor_buffer, entity.top)
-    for _,v in ipairs(self.floor_buffer) do
-       if (not hash[v]) then
-           res[#res+1] = v
-           hash[v] = true
-       end
-    end
-    table.sort(res)
-    self.floor_buffer = res
+    table.sort(self.floor_buffer)
 end
 function Shadow:exitHit(entity)
     --print("Shadow exited a collision")

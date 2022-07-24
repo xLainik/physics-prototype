@@ -15,7 +15,7 @@ local function newPlayer(x, y, z, model, cursor)
     self.z = z or 0
     self.radius = 7
 
-    self.depth = 32
+    self.depth = 24
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
 
@@ -108,7 +108,7 @@ function Player:update(dt)
     self.shadow:update()
     self:updateShadow()
     
-    print(unpack(self.shadow.floor_buffer))
+    --print(unpack(self.shadow.floor_buffer))
     --print(self.on_ground, self.dz)
 
     -- Jump (coyote time + jump buffer)
