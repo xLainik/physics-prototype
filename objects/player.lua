@@ -25,7 +25,7 @@ local function newPlayer(x, y, z, model, cursor)
     self.top_floor = 1000
     self.bottom_floor = -1000
     self.on_ground = false
-    self.jump_max_speed = 200
+    self.jump_max_speed = 150
 
     self.dz = -8
     self.z_gravity = -8
@@ -35,7 +35,7 @@ local function newPlayer(x, y, z, model, cursor)
     -- Coyote jump and jump buffering
     self.coyote_time = 0.1
     self.coyote_time_counter = 0
-    self.jump_buffer_time = 0.2
+    self.jump_buffer_time = 0.1
     self.jump_buffer_time_counter = 0
 
     --Physics
@@ -61,6 +61,7 @@ end
 function Player:update(dt)
 
     local force = 60
+    local speed = 400*dt
 
     -- Input handling
     -- Keyboard Input

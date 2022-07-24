@@ -26,7 +26,7 @@ local function newCamera(aspectRatio)
     self.projectionMatrix = newMatrix()
     
     self.direction = -0.5*math.pi
-    self.pitch = 0.25*math.pi
+    self.pitch = 0.30*math.pi
 
     return self
 end

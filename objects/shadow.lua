@@ -7,7 +7,7 @@ local function newShadow(entity)
     -- Position of the xy center in 2D
     self.entity = entity
     self.x, self.y = self.entity.x, self.entity.y
-    self.radius = self.entity.radius - 1
+    self.radius = self.entity.radius
 
     --Physics
     self.shape = love.physics.newCircleShape(self.radius)

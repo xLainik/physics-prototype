@@ -18,31 +18,36 @@ function love.load()
     love.graphics.setDefaultFilter("nearest") --no atialiasing
 	debug_canvas = love.graphics.newCanvas(1278, 720)
 	main_canvas = love.graphics.newCanvas(1278/SCREENSCALE, 720/SCREENSCALE)
-	main_canvas:setFilter("nearest","nearest") --no atialiasing
+	main_canvas:setFilter("linear","linear") --no atialiasing
 
-	shadow_buffer_canvas = love.graphics.newCanvas(1278*2/SCREENSCALE, 720*2/SCREENSCALE, {format="depth24", readable=true})
+	shadow_buffer_canvas = love.graphics.newCanvas(1278/SCREENSCALE, 720/SCREENSCALE, {format="depth24", readable=true})
     shadow_buffer_canvas:setFilter("nearest","nearest")
+    variance_shadow_canvas = love.graphics.newCanvas(1278/SCREENSCALE, 1278/SCREENSCALE, {format="depth24", readable=true})
+    variance_shadow_canvas:setFilter("linear","linear")
 
 	main_camera = g3d.newCamera()
     main_camera:updateOrthographicMatrix(7.5)
 
-    DISTLIGHTCAM = 10
-    LIGHTVECTOR = {x = 0.01, y = 0, z = 1} -- in g3d units
+    DISTLIGHTCAM = 20
+    LIGHTVECTOR = {x = 0.00001, y = 0.00001, z = 1.0} -- in g3d units
 
     light_camera = g3d.newCamera(shadow_buffer_canvas:getWidth()/shadow_buffer_canvas:getHeight())
     --light_camera:lookAt(0.0 * DISTLIGHTCAM, 0.0 * DISTLIGHTCAM, 1.0 * DISTLIGHTCAM, 0,0,0)
-    light_camera:updateOrthographicMatrix(10)
+    light_camera:updateOrthographicMatrix(20)
 
     current_camera = main_camera
 
     --3d models
     player_model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, {7/8,7/8,1.5})
 
-    myShader_code = love.filesystem.read("shaders/test_shader_6.glsl")
+    myShader_code = love.filesystem.read("shaders/test_shader_7.glsl")
     myShader = love.graphics.newShader(myShader_code)
 
     depthMapShader_code = love.filesystem.read("shaders/depth_map.glsl")
     depthMapShader = love.graphics.newShader(depthMapShader_code)
+
+    varianceShader_code = love.filesystem.read("shaders/variance_shadow_map.glsl")
+    varianceShader = love.graphics.newShader(varianceShader_code)
 
     -- Random seed
 	local seed = os.time()
@@ -212,7 +217,7 @@ function love.update(dt)
 
 	--3D Cam update
 
-	light_camera:lookAt(player_1.x/SCALE3D.x+LIGHTVECTOR.x*DISTLIGHTCAM, player_1.y/SCALE3D.y+LIGHTVECTOR.y*DISTLIGHTCAM, player_1.z/SCALE3D.z+LIGHTVECTOR.z*DISTLIGHTCAM, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
+	light_camera:lookAt(math.floor(player_1.x/SCALE3D.x+LIGHTVECTOR.x*DISTLIGHTCAM)+0.00001, math.floor(player_1.y/SCALE3D.y+LIGHTVECTOR.y*DISTLIGHTCAM), math.floor(player_1.z/SCALE3D.z+LIGHTVECTOR.z*DISTLIGHTCAM), math.floor(player_1.x/SCALE3D.x), math.floor(player_1.y/SCALE3D.y), math.floor(player_1.z/SCALE3D.z))
 
     current_camera:thirdPersonMovement(dt, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 
@@ -282,10 +287,10 @@ function love.draw(dt)
 	    love.graphics.setDepthMode()
 	    love.graphics.setCanvas()
 
-	    if true then
-	        love.graphics.setCanvas{canvas, depth=24}
-	        love.graphics.clear(1,1,1)
-	    end
+	    -- if true then
+	    --     love.graphics.setCanvas{canvas, depth=24}
+	    --     love.graphics.clear(1,1,1)
+	    -- end
 
 	    if love.keyboard.isDown("l") then
 	        current_camera = light_camera
@@ -303,9 +308,6 @@ function love.draw(dt)
 	    end
 	    if myShader:hasUniform("shadowViewMatrix") then
 	        myShader:send("shadowViewMatrix", light_camera.viewMatrix)
-	    end
-	    if myShader:hasUniform("shadowMap") then
-	        myShader:send("shadowMap", shadow_buffer_canvas)
 	    end
 	    if myShader:hasUniform("shadowMapImage") then
 	        myShader:send("shadowMapImage", shadow_buffer_canvas)
@@ -340,7 +342,7 @@ function love.draw(dt)
 end
 
 function love.mousemoved(x,y, dx,dy)
-    current_camera:thirdPersonLook(dx,dy,player_1.x, player_1.y, player_1.z)
+    current_camera:thirdPersonLook(dx,dy,player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 end
 
 function love.wheelmoved(x, y)
