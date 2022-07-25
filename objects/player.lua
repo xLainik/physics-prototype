@@ -3,11 +3,10 @@ Player.__index = Player
 
 local newShadow = require("objects/shadow")
 
-local function newPlayer(x, y, z, model, cursor)
+local function newPlayer(x, y, z, cursor)
     local self = setmetatable({}, Player)
 
     self.cursor = cursor
-    self.model = model
 
     -- Position of the xyz center in 3D
     self.x = x or 50
@@ -20,6 +19,9 @@ local function newPlayer(x, y, z, model, cursor)
     self.bottom = self.z - self.depth/2
 
     self.angle = 0
+
+    local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
+    self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     -- Variables for jumping
     self.top_floor = 1000
@@ -157,10 +159,12 @@ function Player:update(dt)
         else
             self.on_ground = true
             self.z = self.bottom_floor + self.depth/2 + 0.01
+            self.dz = 0
         end
     end
 
     self:setHeight()
+    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 end
 
 function Player:debugDraw()
@@ -174,12 +178,10 @@ function Player:debugDraw()
 end
 
 function Player:draw(shader, camera, shadow_map)
-    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    self.model:draw(shader, camera, shadow_map)
-    love.graphics.setCanvas(main_canvas)
-    love.graphics.setColor(0.8, 0.1, 0.4)
-    love.graphics.print("bot_floor: "..tostring(self.bottom_floor), 10, 40)
-    love.graphics.print("top_floor: "..tostring(self.top_floor), 10, 60)
+    if shadow_map == true then
+        --self.shadow:draw(shader, camera, shadow_map)
+    end
+    --self.model:draw(shader, camera, shadow_map)
 end
 
 function Player:setPosition(x, y)

@@ -9,27 +9,30 @@ function love.load()
 	-- Utility functions
 	require("libs/utils")
 
-	--3D stuff load
+	--3D renderer library
     g3d = require("libs/g3d")
 
+    --2D animation library
+    anim8 = require("libs/anim8")
+
     SCALE3D = {x = 16, y = -16, z = 16} -- 16 love:physics unit (Tiled map) = 1 g3d unit
-    SCREENSCALE=2
+    SCREENSCALE=3
 
     love.graphics.setDefaultFilter("nearest") --no atialiasing
 	debug_canvas = love.graphics.newCanvas(1278, 720)
-	main_canvas = love.graphics.newCanvas(1278/SCREENSCALE, 720/SCREENSCALE)
-	main_canvas:setFilter("linear","linear") --no atialiasing
+	main_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
+	main_canvas:setFilter("nearest","nearest") --no atialiasing
 
-	shadow_buffer_canvas = love.graphics.newCanvas(1278/SCREENSCALE, 720/SCREENSCALE, {format="depth24", readable=true})
+	shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT, {format="depth24", readable=true})
     shadow_buffer_canvas:setFilter("nearest","nearest")
-    variance_shadow_canvas = love.graphics.newCanvas(1278/SCREENSCALE, 1278/SCREENSCALE, {format="depth24", readable=true})
+    variance_shadow_canvas = love.graphics.newCanvas(426, SCREENHEIGHT, {format="depth24", readable=true})
     variance_shadow_canvas:setFilter("linear","linear")
 
 	main_camera = g3d.newCamera()
-    main_camera:updateOrthographicMatrix(7.5)
+    main_camera:updateOrthographicMatrix((SCREENHEIGHT/2)/SCALE3D.x)
 
     DISTLIGHTCAM = 20
-    LIGHTVECTOR = {x = 0.00001, y = 0.00001, z = 1.0} -- in g3d units
+    LIGHTVECTOR = {x = 0.00001, y = 0, z = 1.0} -- in g3d units
 
     light_camera = g3d.newCamera(shadow_buffer_canvas:getWidth()/shadow_buffer_canvas:getHeight())
     --light_camera:lookAt(0.0 * DISTLIGHTCAM, 0.0 * DISTLIGHTCAM, 1.0 * DISTLIGHTCAM, 0,0,0)
@@ -37,8 +40,6 @@ function love.load()
 
     current_camera = main_camera
 
-    --3d models
-    player_model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, {7/8,7/8,1.5})
 
     myShader_code = love.filesystem.read("shaders/test_shader_7.glsl")
     myShader = love.graphics.newShader(myShader_code)
@@ -46,8 +47,11 @@ function love.load()
     depthMapShader_code = love.filesystem.read("shaders/depth_map.glsl")
     depthMapShader = love.graphics.newShader(depthMapShader_code)
 
-    varianceShader_code = love.filesystem.read("shaders/variance_shadow_map.glsl")
-    varianceShader = love.graphics.newShader(varianceShader_code)
+    --varianceShader_code = love.filesystem.read("shaders/variance_shadow_map.glsl")
+    --varianceShader = love.graphics.newShader(varianceShader_code)
+
+    billboardShader_code = love.filesystem.read("shaders/billboard.glsl")
+    billboardShader = love.graphics.newShader(billboardShader_code)
 
     -- Random seed
 	local seed = os.time()
@@ -89,7 +93,11 @@ function love.load()
 	DELETEQUEUE = {}
 
 	cursor_1 = newCursor()
-	player_1 = newPlayer(64, 64, 200, player_model, cursor_1)
+	player_1 = newPlayer(64, 64, 200, cursor_1)
+
+	local newSprite = require("objects/sprite")
+
+	test_sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
 
 	view = {"debug", "3d_view"}
 	view_index = 2
@@ -129,7 +137,7 @@ function love.load()
 			floor_table = {}
 			for i, obj in pairs(layer.objects) do
 				if obj.shape == "rectangle" then
-					local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top_2.obj", false, true), "assets/3d/front_top_texture.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {obj.width/SCALE3D.x, obj.height/SCALE3D.y, depth/SCALE3D.z})
+					local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top.obj", false, true), "assets/3d/front_top_texture.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {obj.width/SCALE3D.x, obj.height/SCALE3D.y, depth/SCALE3D.z})
 					shape = newBox(obj.x, obj.y, layer_height, obj.width, obj.height, depth, model, coll_category)
 				elseif 	obj.shape == "polygon" then
 					local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top.obj", false, true), "assets/3d/white_texture.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {20/SCALE3D.x, 20/SCALE3D.y, 20/SCALE3D.z})
@@ -184,6 +192,10 @@ function love.update(dt)
 	-- Entities update
 	WORLD:update(dt)
 	player_1:update(dt)
+
+	test_sprite:update(dt)
+	
+
 	--cursor_1:update(dt)
 	--enemy_1:update(dt)
 	--enemy_2:update(dt)
@@ -217,9 +229,22 @@ function love.update(dt)
 
 	--3D Cam update
 
+	--light grid = { 1/16 } in g3d units
+
 	light_camera:lookAt(math.floor(player_1.x/SCALE3D.x+LIGHTVECTOR.x*DISTLIGHTCAM)+0.00001, math.floor(player_1.y/SCALE3D.y+LIGHTVECTOR.y*DISTLIGHTCAM), math.floor(player_1.z/SCALE3D.z+LIGHTVECTOR.z*DISTLIGHTCAM), math.floor(player_1.x/SCALE3D.x), math.floor(player_1.y/SCALE3D.y), math.floor(player_1.z/SCALE3D.z))
 
-    current_camera:thirdPersonMovement(dt, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
+	--camera grid = { 0.0625 = 1/16, 0.3125 = 5/16, 0.3125 = 5/16 } in g3d units
+	cam_grid_pos = { math.floor((player_1.x/SCALE3D.x) / 0.0625)*0.0625, math.floor((player_1.y/SCALE3D.y) / 0.3125)*0.3125, math.floor((player_1.z/SCALE3D.z) / 0.3125)*0.3125 }
+	local dx, dy = player_1.body:getLinearVelocity()
+	local x_move = (math.abs(dx) > 0.001) and 1 or 0
+	local y_move = (math.abs(dy) > 0.001) and 1 or 0
+	local z_move = (player_1.dz ~= 0) and 1 or 0
+	print(x_move, y_move, z_move)
+	cam_offset = { 0, z_move*16*(cam_grid_pos[2]-player_1.y/SCALE3D.y) + y_move*16*(cam_grid_pos[3]-player_1.z/SCALE3D.z)}
+	cam_offset_double = { 0, 16*(cam_grid_pos[2]-player_1.y/SCALE3D.y) + 16*(cam_grid_pos[3]-player_1.z/SCALE3D.z)}
+
+	--print(16*(cam_grid_pos[1]-player_1.x/SCALE3D.x), 16*(cam_grid_pos[2]-player_1.y/SCALE3D.y), 16*(cam_grid_pos[3]-player_1.z/SCALE3D.z))
+    current_camera:thirdPersonMovement(dt, unpack(cam_grid_pos))
 
     --light_camera.position = {main_camera.position[1]+2, main_camera.position[2], main_camera.position[3]}
     --light_camera.target = main_camera.target
@@ -330,14 +355,21 @@ function love.draw(dt)
 
 	    player_1:draw(myShader, current_camera, false)
 
+	    if billboardShader:hasUniform("animation_uvs") then
+	    	billboardShader:send("animation_uvs", test_sprite.current_uvs)
+	    end
+
+	    test_sprite.model:setTranslation(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z + test_sprite.z_offset)
+	    test_sprite:draw(billboardShader, current_camera, false)
+
 	    love.graphics.setDepthMode()
 
 	    love.graphics.setCanvas(main_canvas)
 		love.graphics.setColor(0.9, 0.8, 0.9)
-		love.graphics.print("FPS: "..tostring(fps), 10, 10)
+		love.graphics.print("FPS: "..tostring(fps), 10, 10+cam_offset_double[2])
 
 		love.graphics.setCanvas()
-	    love.graphics.draw(main_canvas, 0, 0, 0, SCREENSCALE/WINDOWSCALE)
+	    love.graphics.draw(main_canvas, 0, 0, 0, WINDOWSCALE, WINDOWSCALE, unpack(cam_offset_double))
 	end
 end
 

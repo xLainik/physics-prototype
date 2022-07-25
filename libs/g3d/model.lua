@@ -40,8 +40,6 @@ local function newModel(given, texture, translation, rotation, scale)
         texture = love.graphics.newImage(texture)
     end
 
-        -- if given is a string, use it as a path to a .obj file
-    -- otherwise given is a table, use it as a model defintion
     if type(given) == "string" then
         local extension = given:sub(-4,-1)
         --OBJ File
@@ -189,14 +187,14 @@ function model:draw(shader, camera, shadow_map)
     shader:send("modelMatrix", self.matrix)
     shader:send("viewMatrix", camera.viewMatrix)
     shader:send("projectionMatrix", camera.projectionMatrix)
+    if shader:hasUniform "isCanvasEnabled" then
+        shader:send("isCanvasEnabled", love.graphics.getCanvas() ~= nil)
+    end
     
     if shadow_map == true then
         self:updateDepthMVP(camera)
         if shader:hasUniform("depthMVP") then
             shader:send("depthMVP", self.depthMVP)
-        end
-        if shader:hasUniform "isCanvasEnabled" then
-            shader:send("isCanvasEnabled", love.graphics.getCanvas() ~= nil)
         end
         if shader:hasUniform("animated") then
             local animated = self.animated
@@ -209,10 +207,6 @@ function model:draw(shader, camera, shadow_map)
             shader:send("u_pose", "column", unpack(self.anim.current_pose))
         end
     elseif shadow_map == false then
-        
-        if shader:hasUniform "isCanvasEnabled" then
-            shader:send("isCanvasEnabled", love.graphics.getCanvas() ~= nil)
-        end
         if shader:hasUniform "trasposedInverseModelMatrix" then
             self:updateTransposedInverseMatrix()
             shader:send("trasposedInverseModelMatrix", self.matrixTransposedInverse)
@@ -233,6 +227,8 @@ function model:draw(shader, camera, shadow_map)
         if self.animated and shader:hasUniform("u_pose") and self.anim and self.anim.current_pose then
             shader:send("u_pose", "column", unpack(self.anim.current_pose))
         end
+    else
+        --pass
     end
     
     love.graphics.draw(self.mesh)
@@ -345,6 +341,13 @@ function model:update(dt,anim)
     if self.animated and self.anim then
         self.anim:update(dt)
     end
+end
+
+function model:updateTexture(tex)
+    self.texture = tex
+    -- with nearest filter on, pixelart textures don't get blurring
+    self.texture:setFilter("nearest", "nearest", 1)
+    self.mesh:setTexture(self.texture)
 end
 
 return newModel
