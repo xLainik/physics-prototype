@@ -24,7 +24,7 @@ model.vertexFormat = {
     {"VertexPosition", "float", 3},
     {"VertexTexCoord", "float", 2},
     {"VertexNormal", "float", 3},
-    {"VertexColor", "byte", 4},
+    {"VertexColor", "byte", 4}
 }
 model.shader = g3d.shader
 
@@ -180,7 +180,7 @@ function model:updateDepthMVP(camera)
 end
 
 -- draw the model
-function model:draw(shader, camera, shadow_map)
+function model:draw(shader, camera, shadow_map, isInstanced)
     local shader = shader or self.shader
     love.graphics.setShader(shader)
 
@@ -196,16 +196,6 @@ function model:draw(shader, camera, shadow_map)
         if shader:hasUniform("depthMVP") then
             shader:send("depthMVP", self.depthMVP)
         end
-        if shader:hasUniform("animated") then
-            local animated = self.animated
-            if self.animated and (not self.anim.current_pose) then
-                animated = false
-            end
-            shader:send("animated", animated)
-        end
-        if self.animated and shader:hasUniform("u_pose") and self.anim and self.anim.current_pose then
-            shader:send("u_pose", "column", unpack(self.anim.current_pose))
-        end
     elseif shadow_map == false then
         if shader:hasUniform "trasposedInverseModelMatrix" then
             self:updateTransposedInverseMatrix()
@@ -217,21 +207,16 @@ function model:draw(shader, camera, shadow_map)
         if shader:hasUniform("depthMVP") then
             shader:send("depthMVP", self.depthMVP)
         end
-        if shader:hasUniform("animated") then
-            local animated = self.animated
-            if self.animated and (not self.anim.current_pose) then
-                animated = false
-            end
-            shader:send("animated", animated)
-        end
-        if self.animated and shader:hasUniform("u_pose") and self.anim and self.anim.current_pose then
-            shader:send("u_pose", "column", unpack(self.anim.current_pose))
-        end
-    else
-        --pass
     end
     
-    love.graphics.draw(self.mesh)
+    if isInstanced ~= nil and isInstanced > 0 then
+        if shader:hasUniform("instanced") then
+            shader:send("instanced", isInstanced ~= nil)
+        end
+        love.graphics.drawInstanced(self.mesh, isInstanced)
+    else
+        love.graphics.draw(self.mesh)
+    end
     love.graphics.setShader()
 end
 

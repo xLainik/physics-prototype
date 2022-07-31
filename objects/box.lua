@@ -42,11 +42,6 @@ function Box:update(dt)
     --pass
 end
 
-function Box:debugDraw()
-    love.graphics.setColor(self.color, self.color, self.color)
-    love.graphics.polygon("fill", self.body:getWorldPoints(self.shape:getPoints()))
-end
-
 function Box:draw(shader, camera, shadow_map)
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
     self.model:draw(shader, camera, shadow_map)

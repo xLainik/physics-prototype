@@ -159,7 +159,6 @@ function Player:update(dt)
         else
             self.on_ground = true
             self.z = self.bottom_floor + self.depth/2 + 0.01
-            self.dz = 0
         end
     end
 
@@ -167,19 +166,9 @@ function Player:update(dt)
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 end
 
-function Player:debugDraw()
-    self.shadow:debugDraw()
-    love.graphics.setColor(0.1, 0.05, 0.1)
-    love.graphics.setLineWidth(2)
-    love.graphics.circle("line", self.x, self.y, self.radius, 6)
-    love.graphics.setColor(0.8, 0.1, 0.4)
-    love.graphics.print("bot_floor: "..tostring(self.bottom_floor), 10, 40)
-    love.graphics.print("top_floor: "..tostring(self.top_floor), 10, 60)
-end
-
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        --self.shadow:draw(shader, camera, shadow_map)
+        self.shadow:draw(shader, camera, shadow_map)
     end
     --self.model:draw(shader, camera, shadow_map)
 end

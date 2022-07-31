@@ -22,7 +22,8 @@ mat4 biasMatrix = mat4( // change projected depth values from -1 - 1 to 0 - 1
 varying vec4 project; //shadow projected vertex
 bool smoothShadows = false; //Bilinear Filtering
 
-uniform bool animated;
+uniform bool instanced;
+varying vec2 instanceUVs;
 
 #ifdef VERTEX
     uniform bool isCanvasEnabled;
@@ -30,8 +31,6 @@ uniform bool animated;
 
     uniform mat4 depthMVP;
     
-
-
     varying vec4 worldPosition;
     varying vec4 viewPosition;
 
@@ -41,20 +40,15 @@ uniform bool animated;
     varying vec4 vertexColor;   
 
     attribute vec3 VertexNormal;
-    attribute vec4 VertexWeight;
-    attribute vec4 VertexBone;
-    uniform mat4 u_pose[100]; //100 bones crashes web version, only set to whats absolutely necesary
+    attribute vec3 InstancePosition;
+    attribute vec2 InstanceUVs;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
-        if (animated == true)
+        if (instanced == true)
         {
-            mat4 skeleton = u_pose[int(VertexBone.x*255.0)] * VertexWeight.x +
-                u_pose[int(VertexBone.y*255.0)] * VertexWeight.y +
-                u_pose[int(VertexBone.z*255.0)] * VertexWeight.z +
-                u_pose[int(VertexBone.w*255.0)] * VertexWeight.w;
-            vertexPosition = skeleton * vertexPosition;
-        };
+            vertexPosition.xyz += InstancePosition;
+        }
 
         worldPosition = modelMatrix * vertexPosition;
         viewPosition = viewMatrix * worldPosition;
@@ -62,6 +56,8 @@ uniform bool animated;
 
         vertexNormal = vec4(VertexNormal, 1.0);
         vertexColor = VertexColor;
+
+        instanceUVs = InstanceUVs;
 
         //normal = VertexNormal;
         normal = vec4(trasposedInverseModelMatrix * vertexNormal).xyz;
@@ -86,8 +82,14 @@ uniform bool animated;
     uniform vec3 light_direction;
     uniform Image light_ramp_tex;
 
+
+
     vec4 effect(vec4 color, Image tex, vec2 texcoord, vec2 pixcoord)
     {   
+        if (instanced == true)
+        {
+            texcoord.xy += instanceUVs;
+        }
         // maps the texture (tex) to the uvs (texcoord)
         vec4 texcolor = Texel(tex, texcoord);
 
@@ -103,7 +105,7 @@ uniform bool animated;
         //TEST FOR SHADOW (Shadow Mapping)
         vec3 shadowMapDir = 1.0*ld_normal; //should be the same as ambientVector, but for this game im stylizing the lighting
 
-        float pixelDist = (project.z-0.00005)/project.w; //How far this pixel is from the camera
+        float pixelDist = (project.z-0.0001)/project.w; //How far this pixel is from the camera
         vec2 shadowMapCoord = ((project.xy)/project.w); //Where this vertex is on the shadowMap
         float shadowMapPixelDist;
         float inShadow;

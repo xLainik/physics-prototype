@@ -21,12 +21,13 @@ local function newCamera(aspectRatio)
     self.position = {0,0,0}
     self.target = {1,0,0}
     self.up = {0,0,1}
+    self.size = 5
     self.radius = 12
     self.viewMatrix = newMatrix()
     self.projectionMatrix = newMatrix()
     
-    self.direction = -0.5*math.pi
-    self.pitch = 0.927295218 --53º (12,16,20) or 1.080839 (8,15,17)
+    self.direction = 0
+    self.pitch = 0
 
     return self
 end
@@ -96,7 +97,8 @@ end
 
 -- recreate the camera's orthographic projection matrix from its current values
 function camera:updateOrthographicMatrix(size)
-    self.projectionMatrix:setOrthographicMatrix(self.fov, size or 5, self.nearClip, self.farClip, self.aspectRatio)
+    self.size = size
+    self.projectionMatrix:setOrthographicMatrix(self.fov, self.size, self.nearClip, self.farClip, self.aspectRatio)
 end
 
 function camera:thirdPersonLook(dx, dy, player_x, player_y, player_z)
@@ -150,6 +152,20 @@ function camera:thirdPersonMovement(dt, player_x, player_y, player_z)
     self:updateViewMatrix()
 
     --But changing the parameters directly seems faster
+end
+
+function camera:moveCamera(dx, dy, dz)
+
+    self.position[1] = self.position[1] + dx
+    self.position[2] = self.position[2] + dy
+    self.position[3] = self.position[3] + dz
+
+    self.target[1] = self.target[1] + dx
+    self.target[2] = self.target[2] + dy
+    self.target[3] = self.target[3] + dz
+    
+    self:updateViewMatrix()
+
 end
 
 return newCamera

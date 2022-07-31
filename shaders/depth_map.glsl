@@ -10,23 +10,8 @@ varying vec4 viewPosition;
     uniform mat4 depthMVP;
     uniform bool isCanvasEnabled;
 
-    uniform bool animated;
-
-    attribute vec4 VertexWeight;
-    attribute vec4 VertexBone;
-    uniform mat4 u_pose[100]; //100 bones crashes web version, only set to whats absolutely necesary
-
-
     vec4 position( mat4 transform_projection, vec4 vertexPosition )
     {   
-        if (animated == true)
-        {
-            mat4 skeleton = u_pose[int(VertexBone.x*255.0)] * VertexWeight.x +
-                u_pose[int(VertexBone.y*255.0)] * VertexWeight.y +
-                u_pose[int(VertexBone.z*255.0)] * VertexWeight.z +
-                u_pose[int(VertexBone.w*255.0)] * VertexWeight.w;
-            vertexPosition = skeleton * vertexPosition;
-        };
 
         vec4 screenPosition;
         //screenPosition = depthMVP * vertexPosition;
