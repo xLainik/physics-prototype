@@ -50,6 +50,10 @@ function Projectile:debugDraw()
     love.graphics.circle("line", self.x, self.y, self.radius, 6)
 end
 
+function Projectile:draw()
+    
+end
+
 function Projectile:gotHit(entity, xn, yn)
     --print("Projectile got hit")
     self.active = false

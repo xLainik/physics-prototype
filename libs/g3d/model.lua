@@ -180,7 +180,7 @@ function model:updateDepthMVP(camera)
 end
 
 -- draw the model
-function model:draw(shader, camera, shadow_map, isInstanced)
+function model:draw(shader, camera, shadow_map, instanceCount, animationUVs)
     local shader = shader or self.shader
     love.graphics.setShader(shader)
 
@@ -208,12 +208,21 @@ function model:draw(shader, camera, shadow_map, isInstanced)
             shader:send("depthMVP", self.depthMVP)
         end
     end
-    
-    if isInstanced ~= nil and isInstanced > 0 then
-        if shader:hasUniform("instanced") then
-            shader:send("instanced", isInstanced ~= nil)
+
+    if animationUVs ~= nil then
+        if shader:hasUniform "isAnimated" then
+            shader:send("isAnimated", animationUVs ~= nil)
         end
-        love.graphics.drawInstanced(self.mesh, isInstanced)
+        if shader:hasUniform("animationUVs") then
+            shader:send("animationUVs", animationUVs)
+        end
+    end
+
+    if instanceCount ~= nil and instanceCount > 0 then
+        if shader:hasUniform("isInstanced") then
+            shader:send("isInstanced", instanceCount ~= nil)
+        end
+        love.graphics.drawInstanced(self.mesh, instanceCount)
     else
         love.graphics.draw(self.mesh)
     end

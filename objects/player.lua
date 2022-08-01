@@ -1,8 +1,6 @@
 local Player = {}
 Player.__index = Player
 
-local newShadow = require("objects/shadow")
-
 local function newPlayer(x, y, z, cursor)
     local self = setmetatable({}, Player)
 
@@ -55,7 +53,13 @@ local function newPlayer(x, y, z, cursor)
     self:setHeight()
 
     -- Shadow
+    local newShadow = require("objects/shadow")
     self.shadow = newShadow(self)
+
+    -- Animations
+    local newSprite = require("objects/sprite")
+    self.sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
+    self.sprite:changeAnimation(3)
 
     return self
 end
@@ -162,13 +166,21 @@ function Player:update(dt)
         end
     end
 
+    -- Animation Handleling
+
+    self.sprite:update(dt)
+
+
     self:setHeight()
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    self.sprite.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y + 0.5, self.z/SCALE3D.z + self.sprite.z_offset)
 end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
         self.shadow:draw(shader, camera, shadow_map)
+    else
+        self.sprite:draw(billboardShader, current_camera, false)
     end
     --self.model:draw(shader, camera, shadow_map)
 end

@@ -4,7 +4,6 @@ function love.load()
 	--love:physics init
 	WORLD = love.physics.newWorld(0, 0, true)
 	WORLD:setCallbacks(beginContact, endContact, preSolve, postSolve)
-	WORLDZ = love.physics.newWorld(0, 0, true)
 
 	-- Utility functions
 	require("libs/utils")
@@ -103,7 +102,7 @@ function love.load()
 
 	local newSprite = require("objects/sprite")
 
-	test_sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
+	test_projectile = newSprite(0,0,0, "assets/2d/projectiles/test.png", 16, 16)
 
 	view = {"final_view", "3d_debug"}
 	view_index = 1
@@ -270,9 +269,8 @@ function love.update(dt)
 	WORLD:update(dt)
 	player_1:update(dt)
 
-	test_sprite:update(dt)
+	cursor_1:update(dt)
 	
-	--cursor_1:update(dt)
 	--enemy_1:update(dt)
 	--enemy_2:update(dt)
 	--circle_1:update(dt)
@@ -416,26 +414,27 @@ function love.draw(dt)
 	end
 
     player_1:draw(myShader, current_camera, false)
+    cursor_1:draw()
 
-    if billboardShader:hasUniform("animation_uvs") then
-    	billboardShader:send("animation_uvs", test_sprite.current_uvs)
-    end
-
-    test_sprite.model:setTranslation(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y + 0.5, player_1.z/SCALE3D.z + test_sprite.z_offset)
-    test_sprite:draw(billboardShader, current_camera, false)
-
+    -- Draw UI elements (Original Resolution)
     love.graphics.setDepthMode()
-
 	love.graphics.setCanvas(main_canvas)
+
 	love.graphics.setColor(0.9, 0.8, 0.9)
 	love.graphics.print("FPS: "..tostring(fps), 10, 10)
 
 	love.graphics.setCanvas()
-    love.graphics.draw(main_canvas, 0, 0, 0, WINDOWSCALE, WINDOWSCALE)
+	love.graphics.draw(main_canvas, 0, 0, 0, WINDOWSCALE, WINDOWSCALE)
+
+	-- Draw UI elements (Window size Resolution)
+	cursor_1:screenDraw()
+    
 end
 
 function love.mousemoved(x,y, dx,dy)
-	if dx ~= 0 and dy ~= 0 then
+	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
+
+	if dx ~= 0 and dy ~= 0 and view[view_index] == "3d_debug" then
     	current_camera:thirdPersonLook(dx,dy,player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
     end
 end
@@ -449,7 +448,7 @@ function love.wheelmoved(x, y)
 end
 
 function love.mousepressed( x, y, button, istouch, presses )
-	--pass
+	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
 end
 
 function beginContact(a, b, coll)

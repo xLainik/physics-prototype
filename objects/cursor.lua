@@ -6,6 +6,11 @@ local function newCursor(x, y)
 
 	self.x = x or 0
 	self.y = y or 0
+	self.z = z or 0
+
+	self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0})
+
+	self.screen_x, self.screen_y = 0, 0
 
 	self.state = "idle"
 
@@ -21,9 +26,7 @@ local function newCursor(x, y)
 end
 
 function Cursor:update(dt)
-
-	self.x, self.y = love.mouse.getPosition()
-
+	
 	if love.mouse.isDown(1) then
 		self.state = "click"
 
@@ -36,10 +39,23 @@ function Cursor:update(dt)
 
 		self.click_timer = 0.1
 	end
-
 end
 
-function Cursor:debugDraw()
+function Cursor:updateCoords(cam_target_x, cam_target_y, player_z)
+	self.screen_x, self.screen_y = love.mouse.getPosition()
+	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-SCREENWIDTH/2)/SCALE3D.x
+	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-SCREENHEIGHT/2)/SCALE3D.y*(16/13) - 1
+	self.z = player_z/SCALE3D.z
+
+	self.model:setTranslation(self.x, self.y, self.z)
+end
+
+function Cursor:draw()
+	self.model:draw(nil, current_camera, false)
+end
+
+
+function Cursor:screenDraw()
 	if self.state == "idle" then
 		love.graphics.setColor(0.9, 0.8, 0.9)
 		love.graphics.setPointSize(4)
@@ -50,7 +66,7 @@ function Cursor:debugDraw()
 		love.graphics.setColor(0.3, 0.2, 0.8)
 		love.graphics.setPointSize(10)
 	end
-	love.graphics.points({self.x, self.y})
+	love.graphics.points({self.screen_x, self.screen_y})
 end
 
 function Cursor:changeState(new_state)

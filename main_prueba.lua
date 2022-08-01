@@ -35,6 +35,23 @@ local top_down_cube = {
 }
 
 
+
+local uvs = {}
+uvs[1] = {x = 0, y = 0}
+uvs[2] = {x = 1, y = 0}
+uvs[3] = {x = 0, y = 1}
+uvs[4] = {x = 1, y = 1}
+
+local plane = {
+	{0, -0.5, -0.5, uvs[4].x, uvs[4].y, -1, -0, 0},
+	{-0, 0.5, 0.5, uvs[1].x, uvs[1].y, -1, -0, 0},
+	{-0, 0.5, -0.5, uvs[3].x, uvs[3].y, -1, -0, 0},
+	{0, -0.5, -0.5, uvs[4].x, uvs[4].y, -1, -0, 0},
+	{0, -0.5, 0.5, uvs[2].x, uvs[2].y, -1, -0, 0},
+	{-0, 0.5, 0.5, uvs[1].x, uvs[1].y, -1, -0, 0}
+}
+
+
 local floor_1 = {
 	1, 1, 1, 1,
 	1, 1, 1, 1,
@@ -59,7 +76,7 @@ main_camera:updateOrthographicMatrix(6.5)
 
 current_camera = main_camera
 
-local object = g3d.loadObj("assets/3d/unit_cube_front_top.obj", false, true)
+local object = g3d.loadObj("assets/3d/unit_plane.obj", false, true)
 
 for i, n in ipairs(object) do
 	local vert = {} 
@@ -69,9 +86,9 @@ for i, n in ipairs(object) do
 	print("{"..table.concat(vert, ", ").."},")
 end
 
-object = top_down_cube
+--object = plane
 
-local model = g3d.newModel(object, "assets/3d/front_top_texture_2.png", {0,0,0})
+local model = g3d.newModel(object, "assets/3d/test_texture.png", {0,0,0})
 
 
 -- Unique positions for each instance that will be rendered.

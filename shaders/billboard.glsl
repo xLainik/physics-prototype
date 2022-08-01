@@ -5,6 +5,7 @@ uniform mat4 projectionMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 
+uniform bool isAnimated;
 
 #ifdef VERTEX
     uniform bool isCanvasEnabled;
@@ -31,12 +32,17 @@ uniform mat4 viewMatrix;
 
 #ifdef PIXEL
     
-    uniform vec2 animation_uvs;
+    uniform vec2 animationUVs;
 
     vec4 effect(vec4 color, Image tex, vec2 texcoord, vec2 pixcoord)
     {   
+
+        if (isAnimated == true)
+        {
+            texcoord.xy += animationUVs;
+        }
         // maps the texture (tex) to the uvs (texcoord)
-        vec4 texcolor = Texel(tex, vec2(texcoord.x/2 + animation_uvs.x, texcoord.y/3 + animation_uvs.y));
+        vec4 texcolor = Texel(tex, texcoord);
 
         if (texcolor.a == 0.0)
         {

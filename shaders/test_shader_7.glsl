@@ -22,7 +22,7 @@ mat4 biasMatrix = mat4( // change projected depth values from -1 - 1 to 0 - 1
 varying vec4 project; //shadow projected vertex
 bool smoothShadows = false; //Bilinear Filtering
 
-uniform bool instanced;
+uniform bool isInstanced;
 varying vec2 instanceUVs;
 
 #ifdef VERTEX
@@ -45,7 +45,7 @@ varying vec2 instanceUVs;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
-        if (instanced == true)
+        if (isInstanced == true)
         {
             vertexPosition.xyz += InstancePosition;
         }
@@ -82,11 +82,9 @@ varying vec2 instanceUVs;
     uniform vec3 light_direction;
     uniform Image light_ramp_tex;
 
-
-
     vec4 effect(vec4 color, Image tex, vec2 texcoord, vec2 pixcoord)
     {   
-        if (instanced == true)
+        if (isInstanced == true)
         {
             texcoord.xy += instanceUVs;
         }

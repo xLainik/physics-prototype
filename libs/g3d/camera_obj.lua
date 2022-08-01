@@ -168,4 +168,27 @@ function camera:moveCamera(dx, dy, dz)
 
 end
 
+function camera:followPoint()
+    -- angle1 = center_angle(player1.rect, cursor1.rect)
+    -- #angle1 = math.atan2(cursor1.rect.y - player1.y, cursor1.rect.x - player1.x)
+    -- dist1 = center_distance(player1.rect, cursor1.rect)
+    -- if dist1 > 30: dist1 = 30
+    -- self.desired_pos = [player1.rect.centerx + round(math.cos(angle1)*dist1*0.5), player1.rect.centery + round(math.sin(angle1)*dist1*0.5)] # mid point                
+
+    -- angle2 = math.atan2(self.desired_pos[1] - self.rect.centery, self.desired_pos[0] - self.rect.centerx)
+    -- dist2 = math.sqrt((self.rect.centerx - self.desired_pos[0])**2 + (self.rect.centery - self.desired_pos[1])**2)
+    -- self.speed = easeOutExpo(dist2, 1, 2, dist1)
+    -- #print(self.speed)
+    -- self.speed_x, self.speed_y = math.cos(angle2)*self.speed, math.sin(angle2)*self.speed
+    -- if self.rect.centerx in range(self.desired_pos[0]-3, self.desired_pos[0]+4) and self.rect.centery in range(self.desired_pos[1]-3, self.desired_pos[1]+4):
+    --     self.speed_x, self.speed_y = 0, 0
+    --     self.x, self.y = self.desired_pos[0] - SCREEN_WIDTH/2, self.desired_pos[1] - SCREEN_HEIGHT/2
+    -- else:
+    --     self.x += player1.speed_x + self.speed_x
+    --     self.y += player1.speed_y + self.speed_y
+
+    -- self.rect.x = int(self.x)
+    -- self.rect.y = int(self.y)
+end
+
 return newCamera
