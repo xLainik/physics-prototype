@@ -13,28 +13,12 @@ local function newSprite(x,y,z, spritesheet_path, frame_width, frame_height, bor
     self.total_frames = self.sheet:getWidth()/self.frame_width
     self.total_angles = self.sheet:getHeight()/self.frame_height
 
-    local uv_x_scale = self.frame_width/self.sheet:getWidth()
-    local uv_y_scale = self.frame_height/self.sheet:getHeight()
+    local scale = {self.frame_width/16, 0, (self.frame_height/16)/math.cos(0.927295218)}
+    
+    self.z_offset = (self.frame_height/16)/2
 
-    local uvs = {}
-    uvs[1] = {x = 0*uv_x_scale, y = 0*uv_y_scale}
-    uvs[2] = {x = 1*uv_x_scale, y = 0*uv_y_scale}
-    uvs[3] = {x = 0*uv_x_scale, y = 1*uv_y_scale}
-    uvs[4] = {x = 1*uv_x_scale, y = 1*uv_y_scale}
-
-    local plane = {
-        {0.5, 0, -0.5, uvs[4].x, uvs[4].y, 0, -1, 0},
-        {-0.5, -0, 0.5, uvs[1].x, uvs[1].y, 0, -1, 0},
-        {-0.5, 0, -0.5, uvs[3].x, uvs[3].y, 0, -1, -0},
-        {0.5, 0, -0.5, uvs[4].x, uvs[4].y, 0, -1, -0},
-        {0.5, -0, 0.5, uvs[2].x, uvs[2].y, 0, -1, 0},
-        {-0.5, -0, 0.5, uvs[1].x, uvs[1].y, 0, -1, 0}
-    }
-
-    local scale = {self.frame_width/16, 0, self.frame_height/16}
-    self.x_offset = 0
-    self.z_offset = 0
-    self.model = g3d.newModel(plane, self.sheet, {x,y,z}, {-0.927295218,0,0}, scale)
+    self.imesh = newInstancedMesh(1, "plane", self.sheet, frame_width, frame_height, {scale = scale})
+    self.imesh:addInstance(0,0,0, 0,0)
 
     self.animations = {}
     for row = 1, self.total_angles, 1 do
@@ -50,14 +34,28 @@ function Sprite:changeAnimation(new_anim)
     self.current_anim = new_anim
 end
 
+function Sprite:flipAnimation(x_flip, y_flip)
+    if x_flip == true then
+        self.animations[self.current_anim]:flipH()
+    end
+    if y_flip == true then
+        self.animations[self.current_anim]:flipV()
+    end
+end
+
+function Sprite:setTranslation(x, y, z)
+    self.imesh:updateInstancePosition(1, x, y, z + self.z_offset)
+end
+
 function Sprite:update(dt)
     self.animations[self.current_anim]:update(dt)
-    self.current_uvs = {(self.animations[self.current_anim].position-1)/self.total_frames, (self.current_anim-1)/self.total_angles}
+    local u, v = (self.animations[self.current_anim].position-1)/self.total_frames, (self.current_anim-1)/self.total_angles
+    self.imesh:updateInstanceUVs(1, u,v)
     --print(unpack(self.current_uvs))
 end
 
 function Sprite:draw(shader, camera, shadow_map)
-    self.model:draw(shader, camera, shadow_map, nil, self.current_uvs)
+    self.imesh:draw(billboardShader, camera, shadow_map)
 end
 
 return newSprite

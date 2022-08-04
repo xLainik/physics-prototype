@@ -48,6 +48,8 @@ function love.load()
 
     current_camera = main_camera
 
+	main_camera:moveCamera(0.625*16, -0.3125*16, 0)
+
 
     myShader_code = love.filesystem.read("shaders/test_shader_7.glsl")
     myShader = love.graphics.newShader(myShader_code)
@@ -87,6 +89,8 @@ function love.load()
 	local newCircle = require("objects/circle")
 	local newProjectile = require("objects/projectile")
 
+	newInstancedMesh = require("objects/instanced_mesh")
+
 	require("libs/utils") --utility functions
 
 	SPAWNFUNCTIONS = {}
@@ -100,10 +104,6 @@ function love.load()
 	cursor_1 = newCursor()
 	player_1 = newPlayer(64, 64, 200, cursor_1)
 
-	local newSprite = require("objects/sprite")
-
-	test_projectile = newSprite(0,0,0, "assets/2d/projectiles/test.png", 16, 16)
-
 	view = {"final_view", "3d_debug"}
 	view_index = 1
 	view_timer = 0.1
@@ -116,7 +116,8 @@ function love.load()
 	--Level loader
 	gameMap = require("maps/test_map")
 
-	-- Instanced tile mesh
+	projectile_imesh = newInstancedMesh(100, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
+	projectiles = {}
 
 	collisions = {}
 	tilesets = {}
@@ -128,38 +129,13 @@ function love.load()
 	for i, tileset in pairs(gameMap.tilesets) do
 		local path = string.sub(tileset.image, 3)
 		local tileset_image = love.graphics.newImage(path)
-		local tileset_batch = love.graphics.newSpriteBatch(tileset_image)
-		tilesets[i] = {image = tileset_image, batch = tileset_batch, mapwidth = gameMap.width, mapheight = gameMap.height, tilewidth = tileset.tilewidth,  tileheight = tileset.tileheight}
+		tilesets[i] = {image = tileset_image, mapwidth = gameMap.width, mapheight = gameMap.height, tilewidth = tileset.tilewidth,  tileheight = tileset.tileheight}
 	end
 
-	local uv_x_scale = tilesets[1].tilewidth/tilesets[1].image:getWidth()
-	local uv_y_scale = (tilesets[1].tileheight*2)/tilesets[1].image:getHeight()*(22/32)
+	tile_imesh = newInstancedMesh(200, "cube", tilesets[1].image, 16, 22)
 
-	local uvs = {}
-	uvs[1] = {x = 0*uv_x_scale, y = 0*uv_y_scale}
-	uvs[2] = {x = 1*uv_x_scale, y = 0*uv_y_scale}
-	uvs[3] = {x = 0*uv_x_scale, y = 13/22*uv_y_scale}
-	uvs[4] = {x = 1*uv_x_scale, y = 13/22*uv_y_scale}
-	uvs[5] = {x = 0*uv_x_scale, y = 1*uv_y_scale}
-	uvs[6] = {x = 1*uv_x_scale, y = 1*uv_y_scale}
-	local top_down_cube = {
-		{0.5, -0.5, -0.5, uvs[6].x, uvs[6].y, 0, -1, 0},
-		{0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, 0, -1, 0},
-		{-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, 0, -1, 0},
-		{0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, -0, 0, 1},
-		{0.5, 0.5, 0.5, uvs[2].x, uvs[2].y, -0, 0, 1},
-		{-0.5, 0.5, 0.5, uvs[1].x, uvs[1].y, -0, 0, 1},
-		{0.5, -0.5, -0.5, uvs[6].x, uvs[6].y, 0, -1, 0},
-		{-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, 0, -1, 0},
-		{-0.5, -0.5, -0.5, uvs[5].x, uvs[5].y, 0, -1, 0},
-		{0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, -0, 0, 1},
-		{-0.5, 0.5, 0.5, uvs[1].x, uvs[1].y, -0, 0, 1},
-		{-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, -0, 0, 1},
-	}
-
-	tile_model = g3d.newModel(top_down_cube, tilesets[1].image, {0,0,0})
-	instance_positions = {}
-	instance_uvs = {}
+	tile_instance_positions = {}
+	tile_instance_uvs = {}
 
 	local newTile = require("objects/tile")
 
@@ -190,7 +166,7 @@ function love.load()
 					collisions[2+floor_number] = floor_table
 				end
 				if sublayer.type == "tilelayer" and sublayer.visible == true and floor_number > 0 then -- Tiles
-					print("FLOOR NUMBER: ", floor_number)
+					--print("FLOOR NUMBER: ", floor_number)
 					for y_tile = 1, tilesets[1].mapheight, 1 do
 			            for x_tile = 1, tilesets[1].mapwidth, 1 do
 			            	local tile_id = sublayer.data[tilesets[1].mapwidth*(y_tile-1)+x_tile]
@@ -202,10 +178,10 @@ function love.load()
 
 								local quad = love.graphics.newQuad(x_trans, y_trans, tilesets[1].tilewidth, tilesets[1].tileheight, tilesets[1].image:getDimensions())
 								-- Add tile to the instance table (in g3d units)
-								local pos = {x_tile-0.5, -(y_tile-0.5), (floor_number-1)+0.5}
-								table.insert(instance_positions, pos)
-								table.insert(instance_uvs, {x_trans/tilesets[1].image:getWidth(), y_trans/tilesets[1].image:getHeight()})
-								local tile = newTile((x_tile-1)*tilesets[1].tilewidth, (y_tile-1)*tilesets[1].tileheight, layer_height, quad)
+								local x, y, z = x_tile-0.5, -(y_tile-0.5), (floor_number-1)+0.5
+								local u, v = x_trans/tilesets[1].image:getWidth(), y_trans/tilesets[1].image:getHeight()
+								local instance_index = tile_imesh:addInstance(x,y,z, u,v)
+								local tile = newTile((x_tile-1)*tilesets[1].tilewidth, (y_tile-1)*tilesets[1].tileheight, layer_height, instance_index)
 								table.insert(floor_tiles, tile)
 							end
 						end
@@ -215,13 +191,6 @@ function love.load()
 			end
 		end
 	end
-
-	local instancemesh_pos = love.graphics.newMesh({{"InstancePosition", "float", 3}}, instance_positions, nil, "static")
-	tile_model.mesh:attachAttribute("InstancePosition", instancemesh_pos, "perinstance")
-	local instancemesh_uvs = love.graphics.newMesh({{"InstanceUVs", "float", 3}}, instance_uvs, nil, "static")
-	tile_model.mesh:attachAttribute("InstanceUVs", instancemesh_uvs, "perinstance")
-
-	projectiles = {}
 
 	fps = 60
 end
@@ -249,9 +218,13 @@ function love.update(dt)
 			end
 		elseif love.keyboard.isDown("p") then
     		view_timer = 0
-    		print(current_camera.position[1], current_camera.position[2], current_camera.position[3])
-    		print(current_camera.target[1], current_camera.target[2], current_camera.target[3])
-    		print(current_camera.direction, current_camera.pitch)
+    	elseif love.keyboard.isDown("t") then
+    		view_timer = 0
+    		--print(#tile_imesh.instanced_positions)
+    		--tile_imesh:addInstance({math.random(1, 10),math.random(-10, -1),1}, {0,0})
+    		local remove_index = math.random(1, projectile_imesh.instanced_count)
+    		--print("remove index: ", remove_index)
+    		table.insert(DELETEQUEUE, {group = "Projectile", index = remove_index})
     	elseif love.keyboard.isDown("f11") then
     		view_timer = 0
     		main_canvas:newImageData():encode("png", "screen"..tostring(os.time())..".png")
@@ -276,25 +249,38 @@ function love.update(dt)
 	--circle_1:update(dt)
 
 	-- Projectiles update
-	for index, projectile in ipairs(projectiles) do
+	for i, projectile in ipairs(projectiles) do
 		projectile:update(dt)
+		projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
+		--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 		if not projectile.active then
-			table.insert(DELETEQUEUE, {group = "Projectile", index = index})
+			table.insert(DELETEQUEUE, {group = "Projectile", index = i})
 		end
 	end
 
 	--Spawn the stuff from SPAWNQUEUE
 	for i, spawn in pairs(SPAWNQUEUE) do
-		object = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
+		obj = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
 		if spawn["group"] == "Projectile" then
-			table.insert(projectiles, object)
+			local instance_index = projectile_imesh:addInstance(obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, obj.uvs[1], obj.uvs[2])
+			--print("adding from SPAWNQUEUE: ", instance_index, obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
+			obj.index = instance_index
+			table.insert(projectiles, obj)
 		end
 	end
+
+	--print(#projectiles)
 
 	--Delete the stuff from DELETEQUEUE
 	for i, delete in pairs(DELETEQUEUE) do
 		if delete["group"] == "Projectile" then
-			table.remove(projectiles, delete["index"])
+			--print("removing from DELETEQUEUE: ", delete["index"], "removing projectile index before removing: ", projectiles[delete["index"]].index)
+			local swap_index = projectile_imesh:removeInstance(projectiles[delete["index"]].index)
+			local swap_obj = projectiles[swap_index]
+			projectiles[delete["index"]] = swap_obj
+			projectiles[delete["index"]].index = delete["index"]
+			--print("removing projectile index after removing: ", projectiles[delete["index"]].index)
+			table.remove(projectiles, swap_index)
 		end
 	end
 
@@ -338,7 +324,6 @@ function love.update(dt)
 
 	main_camera:moveCamera(cam_dx, cam_dy, 0)
 
-
 	fps = love.timer.getFPS()
 end
 
@@ -354,15 +339,14 @@ function love.draw(dt)
     love.graphics.setDepthMode("lequal", true)
 
     -- Terrain draw
-    for i, floor in pairs(collisions) do
-		for i, box in pairs(floor) do
-			box:draw(depthMapShader, light_camera, true)
-		end
-	end
+    tile_imesh:draw(depthMapShader, light_camera, true)
     
     -- Entities draw
     player_1:draw(depthMapShader, light_camera, true)
 
+    for i, projectile in pairs(projectiles) do
+		projectile:draw(depthMapShader, light_camera, true)
+	end
 
     love.graphics.setDepthMode()
     love.graphics.setCanvas()
@@ -410,11 +394,13 @@ function love.draw(dt)
 		end
 	else
 		-- Draw tiles
-		tile_model:draw(myShader, current_camera, false, #instance_positions)
+		tile_imesh:draw(myShader, current_camera, false)
 	end
 
+	projectile_imesh:draw(billboardShader, current_camera, false)
+
     player_1:draw(myShader, current_camera, false)
-    cursor_1:draw()
+    --cursor_1:draw()
 
     -- Draw UI elements (Original Resolution)
     love.graphics.setDepthMode()

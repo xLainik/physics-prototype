@@ -180,7 +180,7 @@ function model:updateDepthMVP(camera)
 end
 
 -- draw the model
-function model:draw(shader, camera, shadow_map, instanceCount, animationUVs)
+function model:draw(shader, camera, shadow_map, instanceCount)
     local shader = shader or self.shader
     love.graphics.setShader(shader)
 
@@ -206,15 +206,6 @@ function model:draw(shader, camera, shadow_map, instanceCount, animationUVs)
         end
         if shader:hasUniform("depthMVP") then
             shader:send("depthMVP", self.depthMVP)
-        end
-    end
-
-    if animationUVs ~= nil then
-        if shader:hasUniform "isAnimated" then
-            shader:send("isAnimated", animationUVs ~= nil)
-        end
-        if shader:hasUniform("animationUVs") then
-            shader:send("animationUVs", animationUVs)
         end
     end
 

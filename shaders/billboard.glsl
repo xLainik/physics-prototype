@@ -5,21 +5,30 @@ uniform mat4 projectionMatrix;
 uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 
-uniform bool isAnimated;
+uniform bool isInstanced;
+varying vec2 instanceUVs;
 
 #ifdef VERTEX
     uniform bool isCanvasEnabled;
     
     varying vec4 worldPosition;
     varying vec4 viewPosition;
-
     varying vec4 screenPosition;
+
+    attribute vec3 InstancePosition;
+    attribute vec2 InstanceUVs;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
         worldPosition = modelMatrix * vertexPosition;
+        if (isInstanced == true)
+        {
+            worldPosition.xyz += InstancePosition;
+        }
         viewPosition = viewMatrix * worldPosition;
         screenPosition = projectionMatrix * viewPosition;
+
+        instanceUVs = InstanceUVs;
 
         if (isCanvasEnabled) {
             screenPosition.y *= -1.0;
@@ -31,15 +40,13 @@ uniform bool isAnimated;
 #endif
 
 #ifdef PIXEL
-    
-    uniform vec2 animationUVs;
 
     vec4 effect(vec4 color, Image tex, vec2 texcoord, vec2 pixcoord)
     {   
 
-        if (isAnimated == true)
+        if (isInstanced == true)
         {
-            texcoord.xy += animationUVs;
+            texcoord.xy += instanceUVs;
         }
         // maps the texture (tex) to the uvs (texcoord)
         vec4 texcolor = Texel(tex, texcoord);

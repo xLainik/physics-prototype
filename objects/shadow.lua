@@ -1,7 +1,7 @@
 local Shadow = {}
 Shadow.__index = Shadow
 
-local function newShadow(entity)
+local function newShadow(entity, options)
     local self = setmetatable({}, Shadow)
 
     -- Position of the xy center in 2D
@@ -9,22 +9,30 @@ local function newShadow(entity)
     self.x, self.y = self.entity.x, self.entity.y
     self.radius = self.entity.radius - 1
 
-    --Physics
-    self.shape = love.physics.newCircleShape(self.radius)
-    self.fixture = love.physics.newFixture(self.entity.body, self.shape, 0.1)
+    local physics = true
+
+    if options ~= nil then
+        physics = options["physics"]
+    end
+
+    if physics == true then
+        --Physic object and floor buffer
+        self.shape = love.physics.newCircleShape(self.radius)
+        self.fixture = love.physics.newFixture(self.entity.body, self.shape, 0.1)
+
+        self.fixture:setSensor(true)
+        self.fixture:setCategory(1)
+        self.fixture:setMask(10)
+
+        self.fixture:setUserData(self)
+
+        -- Shadow floor buffer
+        --optional: including a permanent floor (in this case z=0)
+        self.floor_buffer = {0}
+    end
 
     local scale = self.radius*2/SCALE3D.x
     self.model = g3d.newModel(g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", {x,y,z}, {0,0,0}, scale)
-
-    self.fixture:setSensor(true)
-    self.fixture:setCategory(1)
-    self.fixture:setMask(10)
-
-    self.fixture:setUserData(self)
-
-    -- Shadow floor buffer
-    --optional: including a permanent floor (in this case z=0)
-    self.floor_buffer = {0}
 
     return self
 end

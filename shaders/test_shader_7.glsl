@@ -45,12 +45,12 @@ varying vec2 instanceUVs;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
+        
+        worldPosition = modelMatrix * vertexPosition;
         if (isInstanced == true)
         {
-            vertexPosition.xyz += InstancePosition;
+            worldPosition.xyz += InstancePosition;
         }
-
-        worldPosition = modelMatrix * vertexPosition;
         viewPosition = viewMatrix * worldPosition;
         screenPosition = projectionMatrix * viewPosition;
 
@@ -64,7 +64,7 @@ varying vec2 instanceUVs;
 
         cameraDirection = vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
 
-        project = vec4(shadowProjectionMatrix * shadowViewMatrix * modelMatrix * vertexPosition * biasMatrix);
+        project = vec4(shadowProjectionMatrix * shadowViewMatrix * worldPosition * biasMatrix);
 
         if (isCanvasEnabled) {
             screenPosition.y *= -1.0;

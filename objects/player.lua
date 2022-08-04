@@ -61,6 +61,7 @@ local function newPlayer(x, y, z, cursor)
     self.sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
     self.sprite:changeAnimation(3)
 
+
     return self
 end
 
@@ -104,7 +105,12 @@ function Player:update(dt)
 
     -- Mouse Input
     if self.cursor:click() then
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, 10, 750, getAngle(self.x,self.y, self.cursor.x, self.cursor.y)}})
+        --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+        --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
+        --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
+        local angle = -getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y)
+        --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 6, 400, angle, "simple"}})
     end
 
     self.body:applyForce(math.cos(self.angle) * force, math.sin(self.angle) * force)
@@ -173,12 +179,12 @@ function Player:update(dt)
 
     self:setHeight()
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    self.sprite.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y + 0.5, self.z/SCALE3D.z + self.sprite.z_offset)
+    self.sprite:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        self.shadow:draw(shader, camera, shadow_map)
+        self.shadow:draw(shader, camera, true)
     else
         self.sprite:draw(billboardShader, current_camera, false)
     end
