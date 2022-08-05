@@ -31,8 +31,8 @@ local function newInstancedMesh(max_instances, verts, texture, tile_width, tile_
             self.verts = {
                 {0.5, 0, -0.5, uvs[4].x, uvs[4].y, 0, -1, 0},
                 {-0.5, -0, 0.5, uvs[1].x, uvs[1].y, 0, -1, 0},
-                {-0.5, 0, -0.5, uvs[3].x, uvs[3].y, 0, -1, -0},
-                {0.5, 0, -0.5, uvs[4].x, uvs[4].y, 0, -1, -0},
+                {-0.5, 0, -0.5, uvs[3].x, uvs[3].y, 0, -1, 0},
+                {0.5, 0, -0.5, uvs[4].x, uvs[4].y, 0, -1, 0},
                 {0.5, -0, 0.5, uvs[2].x, uvs[2].y, 0, -1, 0},
                 {-0.5, -0, 0.5, uvs[1].x, uvs[1].y, 0, -1, 0}
             }
@@ -48,15 +48,15 @@ local function newInstancedMesh(max_instances, verts, texture, tile_width, tile_
                 {0.5, -0.5, -0.5, uvs[6].x, uvs[6].y, 0, -1, 0},
                 {0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, 0, -1, 0},
                 {-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, 0, -1, 0},
-                {0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, -0, 0, 1},
-                {0.5, 0.5, 0.5, uvs[2].x, uvs[2].y, -0, 0, 1},
-                {-0.5, 0.5, 0.5, uvs[1].x, uvs[1].y, -0, 0, 1},
+                {0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, 0, 0, 1},
+                {0.5, 0.5, 0.5, uvs[2].x, uvs[2].y, 0, 0, 1},
+                {-0.5, 0.5, 0.5, uvs[1].x, uvs[1].y, 0, 0, 1},
                 {0.5, -0.5, -0.5, uvs[6].x, uvs[6].y, 0, -1, 0},
                 {-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, 0, -1, 0},
                 {-0.5, -0.5, -0.5, uvs[5].x, uvs[5].y, 0, -1, 0},
-                {0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, -0, 0, 1},
-                {-0.5, 0.5, 0.5, uvs[1].x, uvs[1].y, -0, 0, 1},
-                {-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, -0, 0, 1},
+                {0.5, -0.5, 0.5, uvs[4].x, uvs[4].y, 0, 0, 1},
+                {-0.5, 0.5, 0.5, uvs[1].x, uvs[1].y, 0, 0, 1},
+                {-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, 0, 0, 1},
             }
         end
     end
@@ -132,7 +132,7 @@ function InstancedMesh:removeInstance(index)
 
     if index ~= self.pointer_last+1 then
         -- We need to swap last instance with the empty slot
-        print("swapping: ", index, "with", self.pointer_last+1)
+        --print("swapping: ", index, "with", self.pointer_last+1)
         self.instanced_positions[index] = pos
         self.instanced_uvs[index] = uvs
         self.instanced_positions[self.pointer_last+1] = {-100, -100, -100}

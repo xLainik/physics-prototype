@@ -22,7 +22,7 @@ local function newShadow(entity, options)
 
         self.fixture:setSensor(true)
         self.fixture:setCategory(1)
-        self.fixture:setMask(10)
+        self.fixture:setMask(1, 10)
 
         self.fixture:setUserData(self)
 
@@ -31,7 +31,7 @@ local function newShadow(entity, options)
         self.floor_buffer = {0}
     end
 
-    local scale = self.radius*2/SCALE3D.x
+    local scale = (self.radius+1)*2/SCALE3D.x
     self.model = g3d.newModel(g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", {x,y,z}, {0,0,0}, scale)
 
     return self

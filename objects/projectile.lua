@@ -4,36 +4,46 @@ Projectile.__index = Projectile
 local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_type)
     local self = setmetatable({}, Projectile)
 
-    self.type = projectile_type or "simple"
+    self.type = projectile_type or "simple player"
     self.index = nil
 
-    -- Set projectile type
-    if self.type == "simple" then
-        self.uvs = {0, 0}
-    end
-
-    self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0})
-
-    --Position of the rectangle center
+    --Position of the 3D cylinder center
     self.x = x
     self.y = y
     self.z = z
     self.radius = radius or 50
 
+    self.depth = 10
+
+    -- Set projectile type
+    if self.type == "simple player" then
+        self.uvs = {0, 0}
+        self.z = self.z - 4
+    end 
+
+    self.top = self.z + self.depth/2
+    self.bottom = self.z - self.depth/2
+
     self.active = true
+
+    local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
+    self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
-    --self.body:setMass(0)
+    self.body:setBullet(true) --slow processing
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape)
+    self.body:setMass(0)
 
     -- Fixture Category and Mask
-    self.fixture:setCategory(6)
-    self.fixture:setMask(2, 11, 12, 13, 14)
-    self.fixture:setUserData(self)
-    --self.fixture:setSensor(true)
-    --self.body:setBullet(true) --slower processing
+
+    -- More type options adjustments
+    if self.type == "simple player" then
+        self.fixture:setCategory(6)
+    end
+
+    self:setHeight()
 
     if ini_speed then
         self:setVelocity(ini_speed, ini_angle)
@@ -43,8 +53,7 @@ local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_t
     end
 
     -- Shadow
-    local newShadow = require("objects/shadow")
-    self.shadow = newShadow(self, {physics = false})
+    self.shadow = newShadow(self)
 
     return self
 end
@@ -57,9 +66,11 @@ end
 
 function Projectile:update(dt)
     self.x, self.y = self.body:getX(), self.body:getY()
+    
+    --Shadow
     self.shadow:update()
-    --self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    --print("update")
+
+    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 end
 
 function Projectile:debugDraw()
@@ -69,12 +80,44 @@ function Projectile:debugDraw()
 end
 
 function Projectile:draw(shader, camera, shadow_map)
-    self.shadow:draw(shader, camera, shadow_map)
+    if shadow_map == true then
+        self.shadow:draw(shader, camera, shadow_map)
+    else
+        --self.model:draw(shader, camera, shadow_map)
+    end
+end
+
+function Projectile:setHeight()
+    local mask = {11,12,13,14}
+
+    for i, coll_cat in ipairs(mask) do
+        local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
+        if overlap >= 0 then
+            -- the player overlaps the floor range, either from the bottom (or top)
+            table.remove(mask, i)
+            if overlap == self.depth then
+                -- the overlap is the whole player's depth
+                break
+            else
+                -- remove the next floor on top (which now is at index i, not i+1)
+                table.remove(mask, i)
+                break
+            end
+        end
+    end
+
+    if self.type == "simple player" then
+        table.insert(mask, 2)
+        table.insert(mask, 6)
+    end
+    -- category 1 are shadows
+    self.fixture:setMask(1, unpack(mask))
+    self.fixture:setUserData(self)
 end
 
 function Projectile:gotHit(entity, xn, yn)
-    --print("Projectile got hit")
-    --self.active = false
+    --print("Projectile got hit: ", entity.fixture:getCategory())
+    self.active = false
 end
 function Projectile:exitHit(entity, xn, yn)
     --print("Projectile exited a collision")

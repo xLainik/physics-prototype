@@ -5,10 +5,16 @@ uniform mat4 viewMatrix; // light_camera
 varying vec4 worldPosition;
 varying vec4 viewPosition;
 
+uniform bool isInstanced;
+varying vec2 instanceUVs;
+
 #ifdef VERTEX
 
     uniform mat4 depthMVP;
     uniform bool isCanvasEnabled;
+
+    attribute vec3 InstancePosition;
+    attribute vec2 InstanceUVs;
 
     vec4 position( mat4 transform_projection, vec4 vertexPosition )
     {   
@@ -17,9 +23,13 @@ varying vec4 viewPosition;
         //screenPosition = depthMVP * vertexPosition;
 
         worldPosition = modelMatrix * vertexPosition;
+        if (isInstanced == true)
+        {
+            worldPosition.xyz += InstancePosition;
+        }
         viewPosition = viewMatrix * worldPosition;
 
-        screenPosition = projectionMatrix * viewMatrix * modelMatrix * vertexPosition;
+        screenPosition = projectionMatrix * viewMatrix * worldPosition;
 
         if (isCanvasEnabled) {
             screenPosition.y *= -1.0;

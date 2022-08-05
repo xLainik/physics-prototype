@@ -66,7 +66,7 @@ function love.load()
 	math.randomseed(seed)
 
 	-- Fixture Category and Mask
-	--1 -> Everything else
+	--1 -> Everything else (Shadows for now)
 	--2 -> Player
     --3 -> Enemies 1
     --4 -> Enemies 2
@@ -90,6 +90,8 @@ function love.load()
 	local newProjectile = require("objects/projectile")
 
 	newInstancedMesh = require("objects/instanced_mesh")
+	newShadow = require("objects/shadow")
+	newSprite = require("objects/sprite")
 
 	require("libs/utils") --utility functions
 
@@ -116,7 +118,9 @@ function love.load()
 	--Level loader
 	gameMap = require("maps/test_map")
 
-	projectile_imesh = newInstancedMesh(100, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
+	--shadow_imesh = newInstancedMesh(300, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
+
+	projectile_imesh = newInstancedMesh(300, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
 	projectiles = {}
 
 	collisions = {}
@@ -165,7 +169,7 @@ function love.load()
 					layer_height = layer_height + SCALE3D.z
 					collisions[2+floor_number] = floor_table
 				end
-				if sublayer.type == "tilelayer" and sublayer.visible == true and floor_number > 0 then -- Tiles
+				if sublayer.type == "tilelayer" and sublayer.visible == true then -- Tiles
 					--print("FLOOR NUMBER: ", floor_number)
 					for y_tile = 1, tilesets[1].mapheight, 1 do
 			            for x_tile = 1, tilesets[1].mapwidth, 1 do
@@ -248,16 +252,6 @@ function love.update(dt)
 	--enemy_2:update(dt)
 	--circle_1:update(dt)
 
-	-- Projectiles update
-	for i, projectile in ipairs(projectiles) do
-		projectile:update(dt)
-		projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
-		--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
-		if not projectile.active then
-			table.insert(DELETEQUEUE, {group = "Projectile", index = i})
-		end
-	end
-
 	--Spawn the stuff from SPAWNQUEUE
 	for i, spawn in pairs(SPAWNQUEUE) do
 		obj = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
@@ -269,17 +263,25 @@ function love.update(dt)
 		end
 	end
 
+	-- Projectiles update
+	for i, projectile in ipairs(projectiles) do
+		projectile:update(dt)
+		projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
+		--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
+		if not projectile.active then
+			table.insert(DELETEQUEUE, {group = "Projectile", index = i})
+			local swap_index = projectile_imesh:removeInstance(projectiles[i].index)
+			local swap_obj = projectiles[swap_index]
+			projectiles[i] = swap_obj
+			projectiles[i].index = i
+		end
+	end
+
 	--print(#projectiles)
 
 	--Delete the stuff from DELETEQUEUE
 	for i, delete in pairs(DELETEQUEUE) do
 		if delete["group"] == "Projectile" then
-			--print("removing from DELETEQUEUE: ", delete["index"], "removing projectile index before removing: ", projectiles[delete["index"]].index)
-			local swap_index = projectile_imesh:removeInstance(projectiles[delete["index"]].index)
-			local swap_obj = projectiles[swap_index]
-			projectiles[delete["index"]] = swap_obj
-			projectiles[delete["index"]].index = delete["index"]
-			--print("removing projectile index after removing: ", projectiles[delete["index"]].index)
 			table.remove(projectiles, swap_index)
 		end
 	end
@@ -333,13 +335,15 @@ function love.draw(dt)
 	love.graphics.setColor(1,1,1)
 
 	-- Shadowmap render
-    love.graphics.setMeshCullMode("back")
+    love.graphics.setMeshCullMode("front")
     love.graphics.setCanvas({depthstencil=shadow_buffer_canvas})
     love.graphics.clear(1,0,0)
     love.graphics.setDepthMode("lequal", true)
 
     -- Terrain draw
     tile_imesh:draw(depthMapShader, light_camera, true)
+
+    love.graphics.setMeshCullMode("back")
     
     -- Entities draw
     player_1:draw(depthMapShader, light_camera, true)
@@ -397,6 +401,10 @@ function love.draw(dt)
 		tile_imesh:draw(myShader, current_camera, false)
 	end
 
+	for i, projectile in pairs(projectiles) do
+		projectile:draw(myShader, current_camera, false)
+	end
+
 	projectile_imesh:draw(billboardShader, current_camera, false)
 
     player_1:draw(myShader, current_camera, false)
@@ -437,7 +445,7 @@ function love.mousepressed( x, y, button, istouch, presses )
 	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
 end
 
-function beginContact(a, b, coll)
+function beginContact(a, b, contact)
 	user_a = a:getUserData()
 	user_b = b:getUserData()
 	user_a:gotHit(user_b)
@@ -445,17 +453,17 @@ function beginContact(a, b, coll)
     --print(a:getUserData().." colliding with "..b:getUserData().."\n")
 end
 
-function endContact(a, b, coll)
+function endContact(a, b, contact)
 	user_a = a:getUserData()
 	user_b = b:getUserData()
 	user_a:exitHit(user_b)
 	user_b:exitHit(user_a)
 end
 
-function preSolve(a, b, coll)
+function preSolve(a, b, contact)
 	--pass
 end
 
-function postSolve(a, b, coll, normalimpulse, tangentimpulse)
+function postSolve(a, b, contact, normalimpulse, tangentimpulse)
 	--pass
 end

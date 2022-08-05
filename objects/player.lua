@@ -10,7 +10,7 @@ local function newPlayer(x, y, z, cursor)
     self.x = x or 50
     self.y = y or 50
     self.z = z or 0
-    self.radius = 7
+    self.radius = 6
 
     self.depth = 24
     self.top = self.z + self.depth/2
@@ -40,9 +40,9 @@ local function newPlayer(x, y, z, cursor)
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
-    self.body:setMass(4)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
+    self.body:setMass(0.5)
 
     self.body:setLinearDamping(5)
     --self.body:setInertia(0)
@@ -53,11 +53,9 @@ local function newPlayer(x, y, z, cursor)
     self:setHeight()
 
     -- Shadow
-    local newShadow = require("objects/shadow")
     self.shadow = newShadow(self)
 
     -- Animations
-    local newSprite = require("objects/sprite")
     self.sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
     self.sprite:changeAnimation(3)
 
@@ -108,9 +106,9 @@ function Player:update(dt)
         --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
         --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
         --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        local angle = -getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y)
+        local angle = -1*getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y)
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 6, 400, angle, "simple"}})
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 6, 400, angle, "simple player"}})
     end
 
     self.body:applyForce(math.cos(self.angle) * force, math.sin(self.angle) * force)
@@ -144,7 +142,7 @@ function Player:update(dt)
     end
     if not(self.on_ground) and not(love.keyboard.isDown("space")) and self.dz > 0 then
         --short jump
-        self.dz = self.dz * 0.75
+        self.dz = self.dz * 0.5
         self.coyote_time_counter = 0
     end
 
@@ -184,11 +182,12 @@ end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        self.shadow:draw(shader, camera, true)
+        self.shadow:draw(shader, camera, shadow_map)
     else
-        self.sprite:draw(billboardShader, current_camera, false)
+        self.sprite:draw(billboardShader, current_camera, shadow_map)
+        --self.model:draw(shader, camera, shadow_map)
     end
-    --self.model:draw(shader, camera, shadow_map)
+    
 end
 
 function Player:setPosition(x, y)
@@ -198,30 +197,30 @@ end
 function Player:setHeight()
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
-    self.mask = {11,12,13,14}
+    local mask = {11,12,13,14}
 
-    for i, coll_cat in ipairs(self.mask) do
+    for i, coll_cat in ipairs(mask) do
         local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
         if overlap >= 0 then
             -- the player overlaps the floor range, either from the bottom (or top)
-            table.remove(self.mask, i)
+            table.remove(mask, i)
             if overlap == self.depth then
                 -- the overlap is the whole player's depth
                 break
             else
                 -- remove the next floor on top (which now is at index i, not i+1)
-                table.remove(self.mask, i)
+                table.remove(mask, i)
                 break
             end
         end
     end
-
-    self.fixture:setMask(unpack(self.mask))
+    -- category 1 are shadows
+    self.fixture:setMask(1, unpack(mask))
     self.fixture:setUserData(self)
 end
 
 function Player:gotHit(entity)
-    --print("Player got hit")
+    --print("Player got hit: ", entity.fixture:getCategory())
 end
 function Player:exitHit(entity)
     --print("Player exited a collision")
