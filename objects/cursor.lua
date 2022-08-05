@@ -8,6 +8,8 @@ local function newCursor(x, y)
 	self.y = y or 0
 	self.z = z or 0
 
+	self.image = love.graphics.newImage("assets/2d/cursor.png")
+
 	self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0})
 
 	self.screen_x, self.screen_y = 0, 0
@@ -56,17 +58,20 @@ end
 
 
 function Cursor:screenDraw()
+	love.graphics.draw(self.image, self.screen_x-3.5*WINDOWSCALE, self.screen_y-3.5*WINDOWSCALE, 0, WINDOWSCALE)
 	if self.state == "idle" then
-		love.graphics.setColor(0.9, 0.8, 0.9)
-		love.graphics.setPointSize(4)
+		--love.graphics.setColor(0.9, 0.8, 0.9)
+		--love.graphics.setPointSize(4)
 	elseif self.state == "click" then
 		love.graphics.setColor(0.95, 0.2, 0.35)
-		love.graphics.setPointSize(10)
+		love.graphics.setPointSize(2*WINDOWSCALE)
+		love.graphics.points({self.screen_x, self.screen_y})
 	elseif self.state == "magic" then
 		love.graphics.setColor(0.3, 0.2, 0.8)
-		love.graphics.setPointSize(10)
+		love.graphics.setPointSize(2*WINDOWSCALE)
+		love.graphics.points({self.screen_x, self.screen_y})
 	end
-	love.graphics.points({self.screen_x, self.screen_y})
+	
 end
 
 function Cursor:changeState(new_state)

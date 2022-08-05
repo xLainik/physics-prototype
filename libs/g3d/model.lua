@@ -9,8 +9,6 @@ local vectors = require(g3d.path .. "/vectors")
 local vectorCrossProduct = vectors.crossProduct
 local vectorNormalize = vectors.normalize
 
-light_ramp_tex = love.graphics.newImage("shaders/light_ramp.png")
-
 ----------------------------------------------------------------------------------------------------
 -- define a model class
 ----------------------------------------------------------------------------------------------------
@@ -200,9 +198,6 @@ function model:draw(shader, camera, shadow_map, instanceCount)
         if shader:hasUniform "trasposedInverseModelMatrix" then
             self:updateTransposedInverseMatrix()
             shader:send("trasposedInverseModelMatrix", self.matrixTransposedInverse)
-        end
-        if shader:hasUniform("light_ramp_tex") then
-            shader:send("light_ramp_tex", light_ramp_tex)
         end
         if shader:hasUniform("depthMVP") then
             shader:send("depthMVP", self.depthMVP)

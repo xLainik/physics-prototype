@@ -16,10 +16,15 @@ varying vec2 instanceUVs;
     varying vec4 screenPosition;
 
     attribute vec3 InstancePosition;
+    attribute vec3 InstanceScale;
     attribute vec2 InstanceUVs;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
+        if (isInstanced == true)
+        {
+            vertexPosition.xyz *= InstanceScale;
+        }
         worldPosition = modelMatrix * vertexPosition;
         if (isInstanced == true)
         {

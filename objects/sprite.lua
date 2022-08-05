@@ -18,7 +18,7 @@ local function newSprite(x,y,z, spritesheet_path, frame_width, frame_height, bor
     self.z_offset = (self.frame_height/16)/2
 
     self.imesh = newInstancedMesh(1, "plane", self.sheet, frame_width, frame_height, {scale = scale})
-    self.imesh:addInstance(0,0,0, 0,0)
+    self.imesh:addInstance(x,y,z, 1,1,1, 0,0)
 
     self.animations = {}
     for row = 1, self.total_angles, 1 do

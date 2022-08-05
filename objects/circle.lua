@@ -5,7 +5,7 @@ local function newCircle(x, y, num_vertices, radius)
 	local self = setmetatable({}, Circle)
 
 	self.num_vertices = n_vertex or 8
-	self.radius = radius or 40
+	self.radius = radius*WINDOWSCALE or 20
 	self.polygon_size = self.num_vertices
 	
 	self.origin_vertices = {}
@@ -145,13 +145,13 @@ function Circle:update(dt)
 
 end
 
-function Circle:debugDraw()
+function Circle:screenDraw()
 	if self.active then
 		love.graphics.setColor(0.9, 0.8, 0.9)
 		love.graphics.circle("line", self.center_x, self.center_y, self.radius, self.polygon_size)
-		love.graphics.setLineWidth(2)
+		love.graphics.setLineWidth(1*WINDOWSCALE)
 		love.graphics.line(self.center_x,self.center_y, self.cursor_x,self.cursor_y)
-		love.graphics.setPointSize(10)
+		love.graphics.setPointSize(5*WINDOWSCALE)
 		love.graphics.points(self.vertices_draw)
 		love.graphics.setColor(0.3, 0.2, 0.8)
 		if #self.node_buffer_draw > 1 then --draw lines

@@ -37,6 +37,8 @@ function love.load()
     LIGHTVECTOR_LF = {0.404508497 * DISTLIGHTCAM, 0.700629269 * DISTLIGHTCAM, -0.587785252 * DISTLIGHTCAM} -- in g3d units
     CURRENTLIGHT_VECTOR = LIGHTVECTOR_TOP
 
+    LIGHTRAMP_TEXTURE = love.graphics.newImage("shaders/light_ramp.png")
+
     main_camera = g3d.newCamera(SCREENWIDTH/SCREENHEIGHT)
     main_camera:lookAt(CAMVECTOR_MAIN[1], CAMVECTOR_MAIN[2], CAMVECTOR_MAIN[3], 0,0,0)
     main_camera:updateOrthographicMatrix((SCREENHEIGHT/2)/SCALE3D.x)
@@ -48,11 +50,16 @@ function love.load()
 
     current_camera = main_camera
 
-	main_camera:moveCamera(0.625*16, -0.3125*16, 0)
+	current_camera:moveCamera(0.625*16, -0.3125*16, 0)
 
 
     myShader_code = love.filesystem.read("shaders/test_shader_7.glsl")
     myShader = love.graphics.newShader(myShader_code)
+
+    myShader:sendColor("light_color", {142/255, 79/255, 28/255})
+    myShader:sendColor("shadow_color", {94/255, 75/255, 194/255})
+    myShader:send("light_direction", CURRENTLIGHT_VECTOR)
+	myShader:send("light_ramp_tex", LIGHTRAMP_TEXTURE)
 
     depthMapShader_code = love.filesystem.read("shaders/depth_map.glsl")
     depthMapShader = love.graphics.newShader(depthMapShader_code)
@@ -104,6 +111,7 @@ function love.load()
 	DELETEQUEUE = {}
 
 	cursor_1 = newCursor()
+	love.mouse.setVisible(false)
 	player_1 = newPlayer(64, 64, 200, cursor_1)
 
 	view = {"final_view", "3d_debug"}
@@ -113,7 +121,7 @@ function love.load()
 	--enemy_1 = newEnemy(900, 300)
 	--enemy_2 = newEnemy(900, 400)
 
-	--circle_1 = newCircle(30, 30)
+	circle_1 = newCircle(30, 30, 8, 20)
 
 	--Level loader
 	gameMap = require("maps/test_map")
@@ -184,7 +192,7 @@ function love.load()
 								-- Add tile to the instance table (in g3d units)
 								local x, y, z = x_tile-0.5, -(y_tile-0.5), (floor_number-1)+0.5
 								local u, v = x_trans/tilesets[1].image:getWidth(), y_trans/tilesets[1].image:getHeight()
-								local instance_index = tile_imesh:addInstance(x,y,z, u,v)
+								local instance_index = tile_imesh:addInstance(x,y,z, 1,1,1, u,v)
 								local tile = newTile((x_tile-1)*tilesets[1].tilewidth, (y_tile-1)*tilesets[1].tileheight, layer_height, instance_index)
 								table.insert(floor_tiles, tile)
 							end
@@ -250,13 +258,13 @@ function love.update(dt)
 	
 	--enemy_1:update(dt)
 	--enemy_2:update(dt)
-	--circle_1:update(dt)
+	circle_1:update(dt)
 
 	--Spawn the stuff from SPAWNQUEUE
 	for i, spawn in pairs(SPAWNQUEUE) do
 		obj = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
 		if spawn["group"] == "Projectile" then
-			local instance_index = projectile_imesh:addInstance(obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, obj.uvs[1], obj.uvs[2])
+			local instance_index = projectile_imesh:addInstance(obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, 1,1,1, obj.uvs[1], obj.uvs[2])
 			--print("adding from SPAWNQUEUE: ", instance_index, obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 			obj.index = instance_index
 			table.insert(projectiles, obj)
@@ -367,9 +375,6 @@ function love.draw(dt)
 	end
 
     --Object render
-    myShader:sendColor("light_color", {142/255, 79/255, 28/255})
-    myShader:sendColor("shadow_color", {94/255, 75/255, 194/255})
-    myShader:send("light_direction", CURRENTLIGHT_VECTOR)
 
     if myShader:hasUniform("shadowProjectionMatrix") then
         myShader:send("shadowProjectionMatrix", light_camera.projectionMatrix)
@@ -401,14 +406,9 @@ function love.draw(dt)
 		tile_imesh:draw(myShader, current_camera, false)
 	end
 
-	for i, projectile in pairs(projectiles) do
-		projectile:draw(myShader, current_camera, false)
-	end
-
 	projectile_imesh:draw(billboardShader, current_camera, false)
 
-    player_1:draw(myShader, current_camera, false)
-    --cursor_1:draw()
+    player_1:draw(billboardShader, current_camera, false)
 
     -- Draw UI elements (Original Resolution)
     love.graphics.setDepthMode()
@@ -421,7 +421,9 @@ function love.draw(dt)
 	love.graphics.draw(main_canvas, 0, 0, 0, WINDOWSCALE, WINDOWSCALE)
 
 	-- Draw UI elements (Window size Resolution)
+	circle_1:screenDraw()
 	cursor_1:screenDraw()
+	
     
 end
 

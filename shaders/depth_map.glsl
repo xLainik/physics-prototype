@@ -14,11 +14,11 @@ varying vec2 instanceUVs;
     uniform bool isCanvasEnabled;
 
     attribute vec3 InstancePosition;
+    attribute vec3 InstanceScale;
     attribute vec2 InstanceUVs;
 
     vec4 position( mat4 transform_projection, vec4 vertexPosition )
     {   
-
         vec4 screenPosition;
         //screenPosition = depthMVP * vertexPosition;
 

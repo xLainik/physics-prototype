@@ -108,7 +108,7 @@ function Player:update(dt)
         --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
         local angle = -1*getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y)
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 6, 400, angle, "simple player"}})
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z + 12, 4, 100, angle, "simple player"}})
     end
 
     self.body:applyForce(math.cos(self.angle) * force, math.sin(self.angle) * force)

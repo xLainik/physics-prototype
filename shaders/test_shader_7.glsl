@@ -41,11 +41,15 @@ varying vec2 instanceUVs;
 
     attribute vec3 VertexNormal;
     attribute vec3 InstancePosition;
+    attribute vec3 InstanceScale;
     attribute vec2 InstanceUVs;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
-        
+        if (isInstanced == true)
+        {
+            vertexPosition.xyz *= InstanceScale;
+        }
         worldPosition = modelMatrix * vertexPosition;
         if (isInstanced == true)
         {
