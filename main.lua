@@ -110,6 +110,11 @@ function love.load()
 	SPAWNQUEUE = {}
 	DELETEQUEUE = {}
 
+	--shadow_imesh = newInstancedMesh(1, "plane", "assets/3d/shadow_texture.png", 16, 13, {rotation = {0.5*math.pi,0,0}})
+	shadow_imesh = newInstancedMesh(200, g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", 16, 16)
+	--local scale = (4)*2/SCALE3D.x
+	--shadow_imesh:addInstance(4,-4,3, scale,scale,scale, 0,0)
+
 	cursor_1 = newCursor()
 	love.mouse.setVisible(false)
 	player_1 = newPlayer(64, 64, 200, cursor_1)
@@ -124,9 +129,7 @@ function love.load()
 	circle_1 = newCircle(30, 30, 8, 20)
 
 	--Level loader
-	gameMap = require("maps/test_map")
-
-	--shadow_imesh = newInstancedMesh(300, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
+	gameMap = require("maps/test_map_2")
 
 	projectile_imesh = newInstancedMesh(300, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
 	projectiles = {}
@@ -255,6 +258,8 @@ function love.update(dt)
 	player_1:update(dt)
 
 	cursor_1:update(dt)
+
+	--shadow_imesh:updateInstancePosition(1, shadow_imesh.instanced_positions[1][1] + 0.625/8, shadow_imesh.instanced_positions[1][2] - 0.3125/8, shadow_imesh.instanced_positions[1][3])
 	
 	--enemy_1:update(dt)
 	--enemy_2:update(dt)
@@ -277,11 +282,8 @@ function love.update(dt)
 		projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
 		--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 		if not projectile.active then
-			table.insert(DELETEQUEUE, {group = "Projectile", index = i})
-			local swap_index = projectile_imesh:removeInstance(projectiles[i].index)
-			local swap_obj = projectiles[swap_index]
-			projectiles[i] = swap_obj
-			projectiles[i].index = i
+			projectile:destroyMe(i)
+			projectile.shadow:destroyMe()
 		end
 	end
 
@@ -343,15 +345,28 @@ function love.draw(dt)
 	love.graphics.setColor(1,1,1)
 
 	-- Shadowmap render
-    love.graphics.setMeshCullMode("front")
     love.graphics.setCanvas({depthstencil=shadow_buffer_canvas})
     love.graphics.clear(1,0,0)
     love.graphics.setDepthMode("lequal", true)
 
+    love.graphics.setMeshCullMode("front")
+
     -- Terrain draw
-    tile_imesh:draw(depthMapShader, light_camera, true)
+    if view[view_index] == "3d_debug" then
+	    -- Draw the collision boxes
+	    for i, floor in pairs(collisions) do
+			for i, box in pairs(floor) do
+				box:draw(depthMapShader, light_camera, true)
+			end
+		end
+	else
+		-- Draw tiles
+		tile_imesh:draw(depthMapShader, light_camera, true)
+	end
 
     love.graphics.setMeshCullMode("back")
+
+    shadow_imesh:draw(depthMapShader, light_camera, true)
     
     -- Entities draw
     player_1:draw(depthMapShader, light_camera, true)
@@ -407,6 +422,8 @@ function love.draw(dt)
 	end
 
 	projectile_imesh:draw(billboardShader, current_camera, false)
+
+	--shadow_imesh:draw(billboardShader, current_camera, false)
 
     player_1:draw(billboardShader, current_camera, false)
 

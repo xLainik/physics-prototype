@@ -4,8 +4,6 @@ Box.__index = Box
 local function newBox(x, y, z, width, height, depth, model, coll_category)
     local self = setmetatable({}, Box)
 
-    self.model = model
-
     -- Position of the xyz center in 3D
     self.x = x + width/2 or 0
     self.y = y + height/2 or 0
@@ -35,6 +33,10 @@ local function newBox(x, y, z, width, height, depth, model, coll_category)
     self.fixture:setCategory(coll_category)
     self.fixture:setUserData(self)
 
+    -- 3D model
+    self.model = model
+    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+
     return self
 end
 
@@ -43,7 +45,6 @@ function Box:update(dt)
 end
 
 function Box:draw(shader, camera, shadow_map)
-    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
     self.model:draw(shader, camera, shadow_map)
 end
 

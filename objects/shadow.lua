@@ -5,9 +5,8 @@ local function newShadow(entity, options)
     local self = setmetatable({}, Shadow)
 
     -- Position of the xy center in 2D
-    self.entity = entity
-    self.x, self.y = self.entity.x, self.entity.y
-    self.radius = self.entity.radius - 1
+    self.x, self.y, self.z = entity.x, entity.y, entity.z
+    self.radius = entity.radius - 1
 
     local physics = true
 
@@ -18,7 +17,7 @@ local function newShadow(entity, options)
     if physics == true then
         --Physic object and floor buffer
         self.shape = love.physics.newCircleShape(self.radius)
-        self.fixture = love.physics.newFixture(self.entity.body, self.shape, 0.1)
+        self.fixture = love.physics.newFixture(entity.body, self.shape, 0.1)
 
         self.fixture:setSensor(true)
         self.fixture:setCategory(1)
@@ -31,14 +30,19 @@ local function newShadow(entity, options)
         self.floor_buffer = {0}
     end
 
+    --Instance
     local scale = (self.radius+1)*2/SCALE3D.x
-    self.model = g3d.newModel(g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", {x,y,z}, {0,0,0}, scale)
+    --self.model = g3d.newModel(g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", {self.x, self.y, self.z}, {0,0,0}, scale)
+
+    self.index = shadow_imesh:addInstance(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z, scale,scale,scale, 0,0)
+    --print("shadow index: ", self.index, self.radius)
 
     return self
 end
 
-function Shadow:update()
-    self.x, self.y = self.entity.x, self.entity.y
+function Shadow:updatePosition(x, y, z)
+    self.x, self.y, self.z = x, y, z
+    shadow_imesh:updateInstancePosition(self.index, self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 end
 
 function Shadow:debugDraw()
@@ -48,8 +52,12 @@ function Shadow:debugDraw()
 end
 
 function Shadow:draw(shader, camera, shadow_map)
-    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.entity.z/SCALE3D.z)
+    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
     self.model:draw(shader, camera, shadow_map)
+end
+
+function Shadow:destroyMe()
+    shadow_imesh:removeInstance(self.index)
 end
 
 function Shadow:gotHit(entity)

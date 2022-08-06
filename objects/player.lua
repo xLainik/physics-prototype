@@ -10,7 +10,7 @@ local function newPlayer(x, y, z, cursor)
     self.x = x or 50
     self.y = y or 50
     self.z = z or 0
-    self.radius = 6
+    self.radius = 4.5
 
     self.depth = 24
     self.top = self.z + self.depth/2
@@ -42,7 +42,7 @@ local function newPlayer(x, y, z, cursor)
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
-    self.body:setMass(0.5)
+    self.body:setMass(2)
 
     self.body:setLinearDamping(5)
     --self.body:setInertia(0)
@@ -66,7 +66,7 @@ end
 function Player:update(dt)
 
     local force = 60
-    local speed = 400*dt
+    local speed = 100
 
     -- Input handling
     -- Keyboard Input
@@ -88,6 +88,7 @@ function Player:update(dt)
         self.angle = math.pi*0.50
     else
         force = 0
+        speed = 0
         --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
     end
@@ -111,12 +112,12 @@ function Player:update(dt)
         table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z + 12, 4, 100, angle, "simple player"}})
     end
 
-    self.body:applyForce(math.cos(self.angle) * force, math.sin(self.angle) * force)
+    self.body:setLinearVelocity(math.cos(self.angle) * speed, math.sin(self.angle) * speed)
 
     self.x, self.y = self.body:getX(), self.body:getY()
 
     --Shadow
-    self.shadow:update()
+    self.shadow:updatePosition(self.x, self.y, self.z)
     self:updateShadow()
     
     --print(unpack(self.shadow.floor_buffer))
@@ -182,7 +183,7 @@ end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        self.shadow:draw(shader, camera, shadow_map)
+        --self.shadow:draw(shader, camera, shadow_map)
     else
         self.sprite:draw(billboardShader, current_camera, shadow_map)
         --self.model:draw(shader, camera, shadow_map)

@@ -22,6 +22,10 @@ varying vec2 instanceUVs;
         vec4 screenPosition;
         //screenPosition = depthMVP * vertexPosition;
 
+        if (isInstanced == true)
+        {
+            vertexPosition.xyz *= InstanceScale;
+        }
         worldPosition = modelMatrix * vertexPosition;
         if (isInstanced == true)
         {
@@ -42,6 +46,13 @@ varying vec2 instanceUVs;
 #ifdef PIXEL
     vec4 effect( vec4 color, Image tex, vec2 texcoord, vec2 pixcoord )
     {   
+        vec4 texcolor = Texel(tex, texcoord);
+
+        // discards totally transparent colors (a > 0 are drawn)
+        if (texcolor.a == 0.0)
+        {
+            discard;
+        }
         
         return vec4(0.0, 0.0, 0.0, 1.0);
     }

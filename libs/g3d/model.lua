@@ -204,10 +204,11 @@ function model:draw(shader, camera, shadow_map, instanceCount)
         end
     end
 
+    if shader:hasUniform("isInstanced") then
+        shader:send("isInstanced", instanceCount ~= nil)
+    end
+
     if instanceCount ~= nil and instanceCount > 0 then
-        if shader:hasUniform("isInstanced") then
-            shader:send("isInstanced", instanceCount ~= nil)
-        end
         love.graphics.drawInstanced(self.mesh, instanceCount)
     else
         love.graphics.draw(self.mesh)

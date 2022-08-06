@@ -68,9 +68,9 @@ function Projectile:update(dt)
     self.x, self.y = self.body:getX(), self.body:getY()
     
     --Shadow
-    self.shadow:update()
-
+    self.shadow:updatePosition(self.x, self.y, self.z)
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+
 end
 
 function Projectile:debugDraw()
@@ -81,10 +81,19 @@ end
 
 function Projectile:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        self.shadow:draw(shader, camera, shadow_map)
+        --self.shadow:draw(shader, camera, shadow_map)
     else
         --self.model:draw(shader, camera, shadow_map)
     end
+end
+
+function Projectile:destroyMe(external_index)
+    table.insert(DELETEQUEUE, {group = "Projectile", index = external_index})
+    local swap_index = projectile_imesh:removeInstance(self.index)
+    local swap_obj = projectiles[swap_index]
+    projectiles[external_index] = swap_obj
+    projectiles[external_index].index = external_index
+    projectiles[external_index].shadow.index = self.shadow.index
 end
 
 function Projectile:setHeight()

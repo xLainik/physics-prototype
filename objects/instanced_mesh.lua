@@ -59,6 +59,8 @@ local function newInstancedMesh(max_instances, verts, texture, tile_width, tile_
                 {-0.5, -0.5, 0.5, uvs[3].x, uvs[3].y, 0, 0, 1},
             }
         end
+    else
+        self.verts = verts
     end
 
     local scale = {1,1,1}
@@ -166,19 +168,21 @@ end
 -- Updates the Position coords of a single instance
 function InstancedMesh:updateInstancePosition(index, x,y,z)
     --local temp1, temp2, temp3 = self.instancemesh_pos:getVertexAttribute(index, 1)
+    self.instanced_positions[index] = {x,y,z}
     self.instancemesh_pos:setVertexAttribute(index, 1, x,y,z)
 end
 
 -- Updates the Scale factor of a single instance
 function InstancedMesh:updateInstanceScale(index, sx,sy,sz)
     --local temp1, temp2, temp3 = self.instancemesh_sca:getVertexAttribute(index, 1)
+    self.instanced_scales[index] = {sx,sy,sz}
     self.instancemesh_sca:setVertexAttribute(index, 1, sx,sy,sz)
 end
 
 -- Updates the UV coords of a single instance
 function InstancedMesh:updateInstanceUVs(index, u,v)
-    --print(self.instancemesh_uvs:isAttributeEnabled("InstanceUVs"))
-    local temp1, temp2 = self.instancemesh_uvs:getVertexAttribute(index, 1)
+    --local temp1, temp2 = self.instancemesh_uvs:getVertexAttribute(index, 1)
+    self.instanced_uvs[index] = {u,v}
     self.instancemesh_uvs:setVertexAttribute( index, 1, u,v)
 end
 
