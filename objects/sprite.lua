@@ -21,26 +21,51 @@ local function newSprite(x,y,z, spritesheet_path, frame_width, frame_height, bor
     self.imesh:addInstance(x,y,z, 1,1,1, 0,0)
 
     self.animations = {}
-    for row = 1, self.total_angles, 1 do
-        self.animations[row] = anim8.newAnimation(self.grid("1-"..tostring(self.sheet:getWidth()/self.frame_width), row), 0.2)
-    end
+    self.uvs = {}
 
-    self.current_anim = 1
+    self.flipVertex = {1, 1}
+    self.speedMultiplier = 1
+
+    self.current_anim = 0
 
     return self
 end
 
-function Sprite:changeAnimation(new_anim)
-    self.current_anim = new_anim
+function Sprite:newAnimation(frame_1, frame_2, row, intervals)
+    local index = #self.animations + 1
+    self.animations[index] = anim8.newAnimation(self.grid(tostring(frame_1).."-"..tostring(frame_2), row), intervals)
+    local lenght = frame_2-frame_1
+    self.uvs[index] = {}
+    for i = 0, lenght, 1 do
+        local u, v = (frame_1-1 + i)/self.total_frames, (row-1)/self.total_angles
+        self.uvs[index][i+1] = {u, v}
+    end
+    return index
 end
 
-function Sprite:flipAnimation(x_flip, y_flip)
-    if x_flip == true then
-        self.animations[self.current_anim]:flipH()
-    end
-    if y_flip == true then
-        self.animations[self.current_anim]:flipV()
-    end
+function Sprite:changeAnimation(index)
+    self:flipAnimation(1, 1)
+    self:setSpeed(1)
+    self.current_anim = index
+end
+
+function Sprite:pauseAtStart(index)
+    -- Jump to first frame and pause
+    self.animations[index]:pauseAtStart()
+end
+
+function Sprite:pauseAtEnd(index)
+    -- Jump to last frame and pause
+    self.animations[index]:pauseAtEnd()
+end
+
+function Sprite:flipAnimation(flipH, flipV)
+    self.flipVertex = {flipH, flipV}
+end
+
+function Sprite:setSpeed(speed)
+    -- Negative values reverse the animation
+    self.speedMultiplier = speed
 end
 
 function Sprite:setTranslation(x, y, z)
@@ -48,14 +73,16 @@ function Sprite:setTranslation(x, y, z)
 end
 
 function Sprite:update(dt)
-    self.animations[self.current_anim]:update(dt)
-    local u, v = (self.animations[self.current_anim].position-1)/self.total_frames, (self.current_anim-1)/self.total_angles
+    self.animations[self.current_anim]:update(dt * self.speedMultiplier)
+    --local u, v = (self.animations[self.current_anim].position-1)/self.total_frames, (self.current_anim-1)/self.total_angles
+    local u, v = unpack(self.uvs[self.current_anim][self.animations[self.current_anim].position])
+    --print(self.uvs[self.animations[self.current_anim].position][self.current_anim])
     self.imesh:updateInstanceUVs(1, u,v)
     --print(unpack(self.current_uvs))
 end
 
 function Sprite:draw(shader, camera, shadow_map)
-    self.imesh:draw(billboardShader, camera, shadow_map)
+    self.imesh:draw(billboardShader, camera, shadow_map, self.flipVertex)
 end
 
 return newSprite

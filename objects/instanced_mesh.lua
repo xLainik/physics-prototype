@@ -186,8 +186,8 @@ function InstancedMesh:updateInstanceUVs(index, u,v)
     self.instancemesh_uvs:setVertexAttribute( index, 1, u,v)
 end
 
-function InstancedMesh:draw(shader, camera, shadow_map)
-    self.model:draw(shader, camera, shadow_map, self.instanced_count)
+function InstancedMesh:draw(shader, camera, shadow_map, flip)
+    self.model:draw(shader, camera, shadow_map, self.instanced_count, flip)
 end
 
 return newInstancedMesh

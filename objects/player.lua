@@ -57,7 +57,18 @@ local function newPlayer(x, y, z, cursor)
 
     -- Animations
     self.sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
-    self.sprite:changeAnimation(3)
+
+    -- 1 -> idle
+    self.sprite:newAnimation(1,1,1, 0.2)
+    self.sprite:pauseAtStart(1)
+    -- 2 -> walk top
+    self.sprite:newAnimation(1,2,2, 0.2)
+    -- 3 -> walk right
+    self.sprite:newAnimation(1,2,3, 0.2)
+    -- 4 -> walk down
+    self.sprite:newAnimation(1,2,4, 0.2)
+
+    self.sprite:changeAnimation(1)
 
 
     return self
@@ -72,25 +83,35 @@ function Player:update(dt)
     -- Keyboard Input
     if love.keyboard.isDown("a") and love.keyboard.isDown("w") then
       self.angle = math.pi*1.25
+      self.sprite:changeAnimation(2)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("w")then
       self.angle = math.pi*1.75 
+      self.sprite:changeAnimation(2)
     elseif love.keyboard.isDown("a") and love.keyboard.isDown("s") then
       self.angle = math.pi*0.75
+      self.sprite:changeAnimation(4)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("s") then
       self.angle = math.pi*0.25
+      self.sprite:changeAnimation(4)
     elseif love.keyboard.isDown("d") then
         self.angle = 0
+        self.sprite:changeAnimation(3)
     elseif love.keyboard.isDown("a") then
         self.angle = math.pi
+        self.sprite:changeAnimation(3)
+        self.sprite:flipAnimation(-1, 1)
     elseif love.keyboard.isDown("w") then
         self.angle = math.pi*1.50
+        self.sprite:changeAnimation(2)
     elseif love.keyboard.isDown("s") then
         self.angle = math.pi*0.50
+        self.sprite:changeAnimation(4)
     else
         force = 0
         speed = 0
         --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
+        self.sprite:changeAnimation(1)
     end
 
     -- Flying mode
@@ -107,9 +128,9 @@ function Player:update(dt)
         --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
         --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
         --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        local angle = -1*getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y)
+        local angle = -1*(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y) + math.random(-10,10)/100)
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z + 12, 4, 100, angle, "simple player"}})
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 4, 100, angle, "simple player"}})
     end
 
     self.body:setLinearVelocity(math.cos(self.angle) * speed, math.sin(self.angle) * speed)

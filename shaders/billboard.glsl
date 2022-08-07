@@ -8,6 +8,8 @@ uniform mat4 viewMatrix;
 uniform bool isInstanced;
 varying vec2 instanceUVs;
 
+uniform vec2 flipVertex;
+
 #ifdef VERTEX
     uniform bool isCanvasEnabled;
     
@@ -24,6 +26,7 @@ varying vec2 instanceUVs;
         if (isInstanced == true)
         {
             vertexPosition.xyz *= InstanceScale;
+            vertexPosition.xy *= flipVertex;
         }
         worldPosition = modelMatrix * vertexPosition;
         if (isInstanced == true)
@@ -52,6 +55,7 @@ varying vec2 instanceUVs;
         if (isInstanced == true)
         {
             texcoord.xy += instanceUVs;
+            //texcoord.x = 1.0 - texcoord.x;
         }
         // maps the texture (tex) to the uvs (texcoord)
         vec4 texcolor = Texel(tex, texcoord);

@@ -21,10 +21,16 @@ local function newCursor(x, y)
 	--"click"
 	--"magic"
 
-	self.click_timer = 0.1
-	self.click_interval = 0.1 --if click is held, self:click() returns true every 0.1 second
+	self.click_timer = 0
+	self.click_interval = 0.2 --if click is held, self:click() returns true every 0.2 second
+
+	self.unhold_timer = 0
 
 	return self
+end
+
+function Cursor:changeInterval(interval)
+	self.click_interval = interval
 end
 
 function Cursor:update(dt)
@@ -32,14 +38,25 @@ function Cursor:update(dt)
 	if love.mouse.isDown(1) then
 		self.state = "click"
 
-		self.click_timer = self.click_timer + dt
+		if self.click_timer >= self.click_interval then
+			self.click_timer = self.click_interval
+		else
+			self.click_timer = self.click_timer + dt
+		end
+		
+		self.unhold_timer = 0
 
 	elseif love.mouse.isDown(2) then
 		self.state = "magic"
 	else 
 		self.state = "idle"
 
-		self.click_timer = 0.1
+		if self.unhold_timer >= self.click_interval then
+			-- recharge timer only if the mouse has been release click_interval second ago or more
+			self.click_timer = self.click_interval
+		else
+			self.unhold_timer = self.unhold_timer + dt
+		end
 	end
 end
 

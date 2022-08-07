@@ -18,7 +18,8 @@ local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_t
     -- Set projectile type
     if self.type == "simple player" then
         self.uvs = {0, 0}
-        self.z = self.z - 4
+        self.y = self.y -4
+        self.z = self.z
     end 
 
     self.top = self.z + self.depth/2
@@ -26,8 +27,8 @@ local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_t
 
     self.active = true
 
-    local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
-    self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
+    --local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
+    --self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
@@ -69,7 +70,7 @@ function Projectile:update(dt)
     
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
-    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    --self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 
 end
 

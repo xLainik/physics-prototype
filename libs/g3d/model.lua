@@ -178,7 +178,7 @@ function model:updateDepthMVP(camera)
 end
 
 -- draw the model
-function model:draw(shader, camera, shadow_map, instanceCount)
+function model:draw(shader, camera, shadow_map, instanceCount, flip)
     local shader = shader or self.shader
     love.graphics.setShader(shader)
 
@@ -209,6 +209,9 @@ function model:draw(shader, camera, shadow_map, instanceCount)
     end
 
     if instanceCount ~= nil and instanceCount > 0 then
+        if shader:hasUniform("flipVertex") then
+            shader:send("flipVertex", flip or {1, 1})
+        end
         love.graphics.drawInstanced(self.mesh, instanceCount)
     else
         love.graphics.draw(self.mesh)
