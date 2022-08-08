@@ -62,8 +62,9 @@ end
 
 function Cursor:updateCoords(cam_target_x, cam_target_y, player_z)
 	self.screen_x, self.screen_y = love.mouse.getPosition()
-	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-SCREENWIDTH/2)/SCALE3D.x
-	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-SCREENHEIGHT/2)/SCALE3D.y*(16/13) - 1
+	self.screen_x, self.screen_y = self.screen_x, self.screen_y
+	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-(SCREENWIDTH-16)/2)/SCALE3D.x
+	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-(SCREENHEIGHT-16)/2)/SCALE3D.y*(16/13) - 1
 	self.z = player_z/SCALE3D.z
 
 	self.model:setTranslation(self.x, self.y, self.z)

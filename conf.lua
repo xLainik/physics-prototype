@@ -6,15 +6,15 @@ function love.conf(t)
 	t.console = true
 	
 	-- source resolution (pixelart)
-	SCREENWIDTH = 426
-    SCREENHEIGHT = 240
+	SCREENWIDTH = 426 + 32
+    SCREENHEIGHT = 240 + 32
 
     WINDOWSCALE = 2
 
 	t.window.title = "AAAAAAAAA"
 	t.window.icon = nil
-	t.window.width = SCREENWIDTH*WINDOWSCALE
-	t.window.height = SCREENHEIGHT*WINDOWSCALE
+	t.window.width = (SCREENWIDTH-32)*WINDOWSCALE
+	t.window.height = (SCREENHEIGHT-32)*WINDOWSCALE
 	t.window.vsync = true
 	t.window.resizable = false
     --t.window.minwidth = 426

@@ -18,8 +18,8 @@ local function newCamera(aspectRatio)
     self.nearClip = 0.01
     self.farClip = 1000
     self.aspectRatio = aspectRatio or love.graphics.getWidth()/love.graphics.getHeight()
-    self.position = {0,0,0}
-    self.target = {1,0,0}
+    self.position = {-1,0,0}
+    self.target = {0,0,0}
     self.up = {0,0,1}
     self.size = 5
     self.radius = 12
@@ -28,6 +28,12 @@ local function newCamera(aspectRatio)
     
     self.direction = 0
     self.pitch = 0
+
+    self.desired_position = self.position
+    self.speed = 0
+
+    self.pixel_dist_x = 1/(16*WINDOWSCALE)
+    self.pixel_dist_y = 1/(13*WINDOWSCALE)
 
     return self
 end
@@ -168,27 +174,27 @@ function camera:moveCamera(dx, dy, dz)
 
 end
 
-function camera:followPoint()
-    -- angle1 = center_angle(player1.rect, cursor1.rect)
-    -- #angle1 = math.atan2(cursor1.rect.y - player1.y, cursor1.rect.x - player1.x)
-    -- dist1 = center_distance(player1.rect, cursor1.rect)
-    -- if dist1 > 30: dist1 = 30
-    -- self.desired_pos = [player1.rect.centerx + round(math.cos(angle1)*dist1*0.5), player1.rect.centery + round(math.sin(angle1)*dist1*0.5)] # mid point                
+function camera:followPoint(x, y)
+    local dif_x = x - self.target[1]
+    local dif_y = y - self.target[2]
+    --print(dif_x, dif_y)
+    local dx, dy = 0, 0
+    local offset_x, offset_y = 0, 0
+    if math.abs(dif_x) >= 0.625 then
+        dx = getSign(dif_x) * 0.625
+    else
+        offset_x = math.floor(dif_x/self.pixel_dist_x) * self.pixel_dist_x * SCALE3D.x
+        
+    end
+    if math.abs(dif_y) >= 0.3125 then
+        dy = getSign(dif_y) * 0.3125
+    else
+        offset_y = math.floor(dif_y/self.pixel_dist_y) * self.pixel_dist_y * (-13)
+    end
+    self:moveCamera(dx, dy, 0)
+    
 
-    -- angle2 = math.atan2(self.desired_pos[1] - self.rect.centery, self.desired_pos[0] - self.rect.centerx)
-    -- dist2 = math.sqrt((self.rect.centerx - self.desired_pos[0])**2 + (self.rect.centery - self.desired_pos[1])**2)
-    -- self.speed = easeOutExpo(dist2, 1, 2, dist1)
-    -- #print(self.speed)
-    -- self.speed_x, self.speed_y = math.cos(angle2)*self.speed, math.sin(angle2)*self.speed
-    -- if self.rect.centerx in range(self.desired_pos[0]-3, self.desired_pos[0]+4) and self.rect.centery in range(self.desired_pos[1]-3, self.desired_pos[1]+4):
-    --     self.speed_x, self.speed_y = 0, 0
-    --     self.x, self.y = self.desired_pos[0] - SCREEN_WIDTH/2, self.desired_pos[1] - SCREEN_HEIGHT/2
-    -- else:
-    --     self.x += player1.speed_x + self.speed_x
-    --     self.y += player1.speed_y + self.speed_y
-
-    -- self.rect.x = int(self.x)
-    -- self.rect.y = int(self.y)
+    return {offset_x, offset_y}
 end
 
 return newCamera

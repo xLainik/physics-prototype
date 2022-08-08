@@ -30,6 +30,8 @@ function love.load()
     variance_shadow_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENWIDTH, {format="depth24", readable=true})
     variance_shadow_canvas:setFilter("linear","linear")
 
+    CAM_OFFSET = {0, 0}
+
     DISTLIGHTCAM = 20
     DISTMAINCAM = 10
     CAMVECTOR_MAIN = { 0 * DISTMAINCAM, -3 * DISTMAINCAM, 4 * DISTMAINCAM}
@@ -110,14 +112,11 @@ function love.load()
 	SPAWNQUEUE = {}
 	DELETEQUEUE = {}
 
-	--shadow_imesh = newInstancedMesh(1, "plane", "assets/3d/shadow_texture.png", 16, 13, {rotation = {0.5*math.pi,0,0}})
 	shadow_imesh = newInstancedMesh(200, g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", 16, 16)
-	--local scale = (4)*2/SCALE3D.x
-	--shadow_imesh:addInstance(4,-4,3, scale,scale,scale, 0,0)
 
 	cursor_1 = newCursor()
 	love.mouse.setVisible(false)
-	player_1 = newPlayer(64, 64, 200, cursor_1)
+	player_1 = newPlayer(70, 65, 200, cursor_1)
 
 	view = {"final_view", "3d_debug"}
 	view_index = 1
@@ -255,15 +254,15 @@ function love.update(dt)
 
 	-- Entities update
 	WORLD:update(dt)
+
 	player_1:update(dt)
-
 	cursor_1:update(dt)
+	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
+	circle_1:update(dt)
 
-	--shadow_imesh:updateInstancePosition(1, shadow_imesh.instanced_positions[1][1] + 0.625/8, shadow_imesh.instanced_positions[1][2] - 0.3125/8, shadow_imesh.instanced_positions[1][3])
-	
 	--enemy_1:update(dt)
 	--enemy_2:update(dt)
-	circle_1:update(dt)
+	
 
 	--Spawn the stuff from SPAWNQUEUE
 	for i, spawn in pairs(SPAWNQUEUE) do
@@ -286,8 +285,6 @@ function love.update(dt)
 			projectile.shadow:destroyMe()
 		end
 	end
-
-	--print(#projectiles)
 
 	--Delete the stuff from DELETEQUEUE
 	for i, delete in pairs(DELETEQUEUE) do
@@ -334,7 +331,9 @@ function love.update(dt)
 		cam_dx = -0.625
 	end
 
-	main_camera:moveCamera(cam_dx, cam_dy, 0)
+	CAM_OFFSET = main_camera:followPoint(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
+
+	--main_camera:moveCamera(cam_dx, cam_dy, 0)
 
 	fps = love.timer.getFPS()
 end
@@ -431,13 +430,13 @@ function love.draw(dt)
     love.graphics.setDepthMode()
 	love.graphics.setCanvas(main_canvas)
 
-	love.graphics.setColor(0.9, 0.8, 0.9)
-	love.graphics.print("FPS: "..tostring(fps), 10, 10)
-
 	love.graphics.setCanvas()
-	love.graphics.draw(main_canvas, 0, 0, 0, WINDOWSCALE, WINDOWSCALE)
+	print(unpack(CAM_OFFSET))
+	love.graphics.draw(main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, unpack(CAM_OFFSET))
 
 	-- Draw UI elements (Window size Resolution)
+	love.graphics.setColor(0.9, 0.8, 0.9)
+	love.graphics.print("FPS: "..tostring(fps), 10, 10)
 	circle_1:screenDraw()
 	cursor_1:screenDraw()
 	
@@ -445,7 +444,6 @@ function love.draw(dt)
 end
 
 function love.mousemoved(x,y, dx,dy)
-	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
 
 	if dx ~= 0 and dy ~= 0 and view[view_index] == "3d_debug" then
     	current_camera:thirdPersonLook(dx,dy,player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
@@ -461,7 +459,7 @@ function love.wheelmoved(x, y)
 end
 
 function love.mousepressed( x, y, button, istouch, presses )
-	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
+	--
 end
 
 function beginContact(a, b, contact)

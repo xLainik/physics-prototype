@@ -70,14 +70,13 @@ local function newPlayer(x, y, z, cursor)
 
     self.sprite:changeAnimation(1)
 
-
     return self
 end
 
 function Player:update(dt)
 
     local force = 60
-    local speed = 100
+    local speed = 16*4
 
     -- Input handling
     -- Keyboard Input
@@ -128,14 +127,16 @@ function Player:update(dt)
         --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
         --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
         --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        local angle = -1*(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y) + math.random(-10,10)/100)
+        local angle = -1*(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y))
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
         table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 4, 100, angle, "simple player"}})
     end
 
     self.body:setLinearVelocity(math.cos(self.angle) * speed, math.sin(self.angle) * speed)
 
-    self.x, self.y = self.body:getX(), self.body:getY()
+    --self.x, self.y = self.body:getX(), self.body:getY()
+
+    self.x, self.y = math.floor(self.body:getX()), math.floor(self.body:getY())
 
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
