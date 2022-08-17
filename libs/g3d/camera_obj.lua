@@ -174,7 +174,7 @@ function camera:moveCamera(dx, dy, dz)
 
 end
 
-function camera:followPoint(x, y)
+function camera:followPointOffset(x, y)
     local dif_x = x - self.target[1]
     local dif_y = y - self.target[2]
     --print(dif_x, dif_y)
@@ -195,6 +195,21 @@ function camera:followPoint(x, y)
     
 
     return {offset_x, offset_y}
+end
+
+function camera:followPoint(x, y)
+    local dif_x = x - self.target[1]
+    local dif_y = y - self.target[2]
+    --print(dif_x, dif_y)
+    local dx, dy = 0, 0
+    local offset_x, offset_y = 0, 0
+    if math.abs(dif_x) >= 0.03125 then
+        dx = getSign(dif_x) * 0.03125
+    end
+    if math.abs(dif_y) >= 0.03125 then
+        dy = getSign(dif_y) * 0.03125 * (13/16)
+    end
+    self:moveCamera(dx, dy, 0)
 end
 
 return newCamera

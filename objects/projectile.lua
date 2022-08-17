@@ -1,7 +1,7 @@
 local Projectile = {}
 Projectile.__index = Projectile
 
-local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_type)
+local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectile_type)
     local self = setmetatable({}, Projectile)
 
     self.type = projectile_type or "simple player"
@@ -11,13 +11,16 @@ local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_t
     self.x = x
     self.y = y
     self.z = z
-    self.radius = radius or 50
+    
+    self.angle = ini_angle
 
     self.depth = 10
 
     -- Set projectile type
     if self.type == "simple player" then
         self.uvs = {0, 0}
+        self.radius = 4
+        self.speed = 100
         self.y = self.y -4
         self.z = self.z
     end 
@@ -46,12 +49,9 @@ local function newProjectile(x, y, z, radius, ini_speed, ini_angle, projectile_t
 
     self:setHeight()
 
-    if ini_speed then
-        self:setVelocity(ini_speed, ini_angle)
-    else
-        self.speed = 0
-        self.angle = 0
-    end
+    --self:setVelocity(self.speed, self.angle)
+    print(entity_dx, entity_dy)
+    self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
 
     -- Shadow
     self.shadow = newShadow(self)
@@ -95,6 +95,9 @@ function Projectile:destroyMe(external_index)
     projectiles[external_index] = swap_obj
     projectiles[external_index].index = external_index
     projectiles[external_index].shadow.index = self.shadow.index
+    
+    self.body:destroy()
+
 end
 
 function Projectile:setHeight()

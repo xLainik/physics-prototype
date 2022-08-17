@@ -18,7 +18,9 @@ function love.load()
     -- 	print(name, i)
     -- end
 
-    SCALE3D = {x = 16, y = -16, z = 16} -- 16 love:physics unit (Tiled map) = 1 g3d unit
+    SCALE3D = {x = 16, y = -16, z = 16} -- 16 love:physics unit = 1 g3d unit
+
+    SCREENSCALE = 16 -- 16 is 1 pixel of texture = 1 screen pixel
 
     love.graphics.setDefaultFilter("nearest") --no atialiasing
 	debug_canvas = love.graphics.newCanvas(1278, 720)
@@ -43,7 +45,7 @@ function love.load()
 
     main_camera = g3d.newCamera(SCREENWIDTH/SCREENHEIGHT)
     main_camera:lookAt(CAMVECTOR_MAIN[1], CAMVECTOR_MAIN[2], CAMVECTOR_MAIN[3], 0,0,0)
-    main_camera:updateOrthographicMatrix((SCREENHEIGHT/2)/SCALE3D.x)
+    main_camera:updateOrthographicMatrix((SCREENHEIGHT/2)/SCREENSCALE)
 
     light_camera = g3d.newCamera(shadow_buffer_canvas:getWidth()/shadow_buffer_canvas:getHeight())
     light_camera:lookAt(CURRENTLIGHT_VECTOR[1], CURRENTLIGHT_VECTOR[2], CURRENTLIGHT_VECTOR[3], 0, 0, 0)
@@ -127,84 +129,94 @@ function love.load()
 
 	circle_1 = newCircle(30, 30, 8, 20)
 
-	--Level loader
-	gameMap = require("maps/test_map_2")
-
 	projectile_imesh = newInstancedMesh(300, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
 	projectiles = {}
 
+	--Level loader
 	collisions = {}
-	tilesets = {}
-	tiles = {}
-	local layer_height = -SCALE3D.z
-	local depth = SCALE3D.z
 
-	-- Load tileset's images
-	for i, tileset in pairs(gameMap.tilesets) do
-		local path = string.sub(tileset.image, 3)
-		local tileset_image = love.graphics.newImage(path)
-		tilesets[i] = {image = tileset_image, mapwidth = gameMap.width, mapheight = gameMap.height, tilewidth = tileset.tilewidth,  tileheight = tileset.tileheight}
-	end
-
-	tile_imesh = newInstancedMesh(200, "cube", tilesets[1].image, 16, 22)
-
-	tile_instance_positions = {}
-	tile_instance_uvs = {}
-
-	local newTile = require("objects/tile")
-
-	-- Read tiled layers for hitboxes and tile placement
-	for i, group in pairs(gameMap.layers) do
-		if group.type == "group" then -- Groups (Floors)
-			local floor_tiles = {}
-			local words = {}
-			for w in string.gmatch(group.name, "([^%s]+)") do
-				table.insert(words, w)
-			end
-			local floor_number = tonumber(words[2])
-			for i, sublayer in pairs(group.layers) do
-				if sublayer.type == "objectgroup" then -- Hitboxes
-					coll_category = 10 + floor_number
-					floor_table = {}
-					for i, obj in pairs(sublayer.objects) do
-						if obj.shape == "rectangle" then
-							local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top_3.obj", false, true), "assets/3d/front_top_texture_2.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {obj.width/SCALE3D.x, obj.height/SCALE3D.y, depth/SCALE3D.z})
-							shape = newBox(obj.x, obj.y, layer_height, obj.width, obj.height, depth, model, coll_category)
-						elseif 	obj.shape == "polygon" then
-							local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top.obj", false, true), "assets/3d/white_texture.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {20/SCALE3D.x, 20/SCALE3D.y, 20/SCALE3D.z})
-							shape = newPolygon(obj.x, obj.y, layer_height, obj.polygon, model, coll_category)
-						end
-						table.insert(floor_table, shape)
-					end
-					layer_height = layer_height + SCALE3D.z
-					collisions[2+floor_number] = floor_table
-				end
-				if sublayer.type == "tilelayer" and sublayer.visible == true then -- Tiles
-					--print("FLOOR NUMBER: ", floor_number)
-					for y_tile = 1, tilesets[1].mapheight, 1 do
-			            for x_tile = 1, tilesets[1].mapwidth, 1 do
-			            	local tile_id = sublayer.data[tilesets[1].mapwidth*(y_tile-1)+x_tile]
-			            	if tile_id ~= 0 then
-			            		local tileset_y = math.ceil(tile_id/(tilesets[1].image:getWidth()/tilesets[1].tilewidth)) - 1
-								local tileset_x = (tile_id - (tileset_y*(tilesets[1].image:getWidth()/tilesets[1].tilewidth))) - 1
-			            		local x_trans = tileset_x*tilesets[1].tilewidth
-			            		local y_trans = tileset_y*tilesets[1].tileheight
-
-								local quad = love.graphics.newQuad(x_trans, y_trans, tilesets[1].tilewidth, tilesets[1].tileheight, tilesets[1].image:getDimensions())
-								-- Add tile to the instance table (in g3d units)
-								local x, y, z = x_tile-0.5, -(y_tile-0.5), (floor_number-1)+0.5
-								local u, v = x_trans/tilesets[1].image:getWidth(), y_trans/tilesets[1].image:getHeight()
-								local instance_index = tile_imesh:addInstance(x,y,z, 1,1,1, u,v)
-								local tile = newTile((x_tile-1)*tilesets[1].tilewidth, (y_tile-1)*tilesets[1].tileheight, layer_height, instance_index)
-								table.insert(floor_tiles, tile)
-							end
-						end
-					end
-					tiles[floor_number] = floor_tiles
-				end
-			end
+	for line in love.filesystem.lines("maps/Test/test_map.txt") do
+		local words = {}
+		for word in string.gmatch(line, "([^%s]+)") do
+			table.insert(words, word)
 		end
+		if words[1] == "Box" then
+			-- Read position and dimension (scale)
+			local pos = {}
+			for coord in string.gmatch(words[2], "([^,]+)") do
+				table.insert(pos, coord)
+			end
+			local dim = {}
+			for coord in string.gmatch(words[3], "([^,]+)") do
+				table.insert(dim, coord)
+			end
+			-- Spawn a Box collision shape
+			local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube.obj", false, true), "assets/3d/no_texture.png", {pos[1], pos[2], pos[3]}, {0,0,0}, {dim[1], dim[2], dim[3]})
+			local coll_category = 11 + pos[3]
+			shape = newBox(pos[1], pos[2], pos[3], dim[1], dim[2], dim[3], model, coll_category)
+		end
+
+		table.insert(collisions, shape)
+
 	end
+
+	-- Tiles
+	tiles = g3d.newModel(g3d.loadObj("maps/Test/Test map.obj", false, true), "maps/Test/tileset.png", {0,0,0}, {0,0,math.pi/2})
+
+	-- local newTile = require("objects/tile")
+
+	-- -- Read tiled layers for hitboxes and tile placement
+	-- for i, group in pairs(gameMap.layers) do
+	-- 	if group.type == "group" then -- Groups (Floors)
+	-- 		local floor_tiles = {}
+	-- 		local words = {}
+	-- 		for w in string.gmatch(group.name, "([^%s]+)") do
+	-- 			table.insert(words, w)
+	-- 		end
+	-- 		local floor_number = tonumber(words[2])
+	-- 		for i, sublayer in pairs(group.layers) do
+	-- 			if sublayer.type == "objectgroup" then -- Hitboxes
+	-- 				coll_category = 10 + floor_number
+	-- 				floor_table = {}
+	-- 				for i, obj in pairs(sublayer.objects) do
+	-- 					if obj.shape == "rectangle" then
+	-- 						local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top_3.obj", false, true), "assets/3d/front_top_texture_2.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {obj.width/SCALE3D.x, obj.height/SCALE3D.y, depth/SCALE3D.z})
+	-- 						shape = newBox(obj.x, obj.y, layer_height, obj.width, obj.height, depth, model, coll_category)
+	-- 					elseif 	obj.shape == "polygon" then
+	-- 						local model = g3d.newModel(g3d.loadObj("assets/3d/unit_cube_front_top.obj", false, true), "assets/3d/white_texture.png", {obj.x/SCALE3D.x, obj.y/SCALE3D.y, layer_height}, {0,0,0}, {20/SCALE3D.x, 20/SCALE3D.y, 20/SCALE3D.z})
+	-- 						shape = newPolygon(obj.x, obj.y, layer_height, obj.polygon, model, coll_category)
+	-- 					end
+	-- 					table.insert(floor_table, shape)
+	-- 				end
+	-- 				layer_height = layer_height + SCALE3D.z
+	-- 				collisions[2+floor_number] = floor_table
+	-- 			end
+	-- 			if sublayer.type == "tilelayer" and sublayer.visible == true then -- Tiles
+	-- 				--print("FLOOR NUMBER: ", floor_number)
+	-- 				for y_tile = 1, tilesets[1].mapheight, 1 do
+	-- 		            for x_tile = 1, tilesets[1].mapwidth, 1 do
+	-- 		            	local tile_id = sublayer.data[tilesets[1].mapwidth*(y_tile-1)+x_tile]
+	-- 		            	if tile_id ~= 0 then
+	-- 		            		local tileset_y = math.ceil(tile_id/(tilesets[1].image:getWidth()/tilesets[1].tilewidth)) - 1
+	-- 							local tileset_x = (tile_id - (tileset_y*(tilesets[1].image:getWidth()/tilesets[1].tilewidth))) - 1
+	-- 		            		local x_trans = tileset_x*tilesets[1].tilewidth
+	-- 		            		local y_trans = tileset_y*tilesets[1].tileheight
+
+	-- 							local quad = love.graphics.newQuad(x_trans, y_trans, tilesets[1].tilewidth, tilesets[1].tileheight, tilesets[1].image:getDimensions())
+	-- 							-- Add tile to the instance table (in g3d units)
+	-- 							local x, y, z = x_tile-0.5, -(y_tile-0.5), (floor_number-1)+0.5
+	-- 							local u, v = x_trans/tilesets[1].image:getWidth(), y_trans/tilesets[1].image:getHeight()
+	-- 							local instance_index = tile_imesh:addInstance(x,y,z, 1,1,1, u,v)
+	-- 							local tile = newTile((x_tile-1)*tilesets[1].tilewidth, (y_tile-1)*tilesets[1].tileheight, layer_height, instance_index)
+	-- 							table.insert(floor_tiles, tile)
+	-- 						end
+	-- 					end
+	-- 				end
+	-- 				tiles[floor_number] = floor_tiles
+	-- 			end
+	-- 		end
+	-- 	end
+	-- end
 
 	fps = 60
 end
@@ -322,16 +334,21 @@ function love.update(dt)
 
 	if love.keyboard.isDown("up") then
 		cam_dy = 0.3125
+		cam_dy = 0.05
 	elseif love.keyboard.isDown("down") then
 		cam_dy = -0.3125
+		cam_dy = -0.05
 	end
 	if love.keyboard.isDown("right") then
 		cam_dx = 0.625
+		cam_dx = 0.05
 	elseif love.keyboard.isDown("left") then
 		cam_dx = -0.625
+		cam_dx = -0.05
 	end
 
-	CAM_OFFSET = main_camera:followPoint(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
+	--main_camera:followPoint(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
+	CAM_OFFSET = main_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 
 	--main_camera:moveCamera(cam_dx, cam_dy, 0)
 
@@ -352,15 +369,13 @@ function love.draw(dt)
 
     -- Terrain draw
     if view[view_index] == "3d_debug" then
-	    -- Draw the collision boxes
-	    for i, floor in pairs(collisions) do
-			for i, box in pairs(floor) do
-				box:draw(depthMapShader, light_camera, true)
-			end
+	    -- Draw terrain collision boxes
+		for i, box in pairs(collisions) do
+			box:draw(depthMapShader, light_camera, true)
 		end
 	else
 		-- Draw tiles
-		tile_imesh:draw(depthMapShader, light_camera, true)
+		--tile_imesh:draw(depthMapShader, light_camera, true)
 	end
 
     love.graphics.setMeshCullMode("back")
@@ -409,15 +424,14 @@ function love.draw(dt)
     love.graphics.setMeshCullMode("none")
 
     if view[view_index] == "3d_debug" then
-	    -- Draw the collision boxes
-	    for i, floor in pairs(collisions) do
-			for i, box in pairs(floor) do
-				box:draw(myShader, current_camera, false)
-			end
+	    -- Draw terrain collision boxes
+	    for i, box in pairs(collisions) do
+			box:draw(myShader, current_camera, false)
 		end
 	else
 		-- Draw tiles
-		tile_imesh:draw(myShader, current_camera, false)
+		--tile_imesh:draw(myShader, current_camera, false)
+		tiles:draw(myShader, current_camera, false)
 	end
 
 	projectile_imesh:draw(billboardShader, current_camera, false)
@@ -426,12 +440,14 @@ function love.draw(dt)
 
     player_1:draw(billboardShader, current_camera, false)
 
+    cursor_1:draw(myShader, current_camera, false)
+
     -- Draw UI elements (Original Resolution)
     love.graphics.setDepthMode()
 	love.graphics.setCanvas(main_canvas)
 
 	love.graphics.setCanvas()
-	print(unpack(CAM_OFFSET))
+	--print(unpack(CAM_OFFSET))
 	love.graphics.draw(main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, unpack(CAM_OFFSET))
 
 	-- Draw UI elements (Window size Resolution)

@@ -22,7 +22,7 @@ local function newCursor(x, y)
 	--"magic"
 
 	self.click_timer = 0
-	self.click_interval = 0.2 --if click is held, self:click() returns true every 0.2 second
+	self.click_interval = 0.05 --if click is held, self:click() returns true every 0.2 second
 
 	self.unhold_timer = 0
 
@@ -63,8 +63,8 @@ end
 function Cursor:updateCoords(cam_target_x, cam_target_y, player_z)
 	self.screen_x, self.screen_y = love.mouse.getPosition()
 	self.screen_x, self.screen_y = self.screen_x, self.screen_y
-	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-(SCREENWIDTH-16)/2)/SCALE3D.x
-	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-(SCREENHEIGHT-16)/2)/SCALE3D.y*(16/13) - 1
+	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-(SCREENWIDTH-16)/2)/SCREENSCALE + CAM_OFFSET[1]/16
+	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-(SCREENHEIGHT-16)/2)/(-SCREENSCALE)*(16/13) - 1 + CAM_OFFSET[2]/-16
 	self.z = player_z/SCALE3D.z
 
 	self.model:setTranslation(self.x, self.y, self.z)

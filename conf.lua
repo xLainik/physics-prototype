@@ -15,7 +15,7 @@ function love.conf(t)
 	t.window.icon = nil
 	t.window.width = (SCREENWIDTH-32)*WINDOWSCALE
 	t.window.height = (SCREENHEIGHT-32)*WINDOWSCALE
-	t.window.vsync = true
+	t.window.vsync = false
 	t.window.resizable = false
     --t.window.minwidth = 426
     --t.window.minheight = 240

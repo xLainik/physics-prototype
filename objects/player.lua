@@ -9,7 +9,7 @@ local function newPlayer(x, y, z, cursor)
     -- Position of the xyz center in 3D
     self.x = x or 50
     self.y = y or 50
-    self.z = z or 0
+    self.z = z or 40
     self.radius = 4.5
 
     self.depth = 24
@@ -56,19 +56,27 @@ local function newPlayer(x, y, z, cursor)
     self.shadow = newShadow(self)
 
     -- Animations
-    self.sprite = newSprite(0,0,0, "assets/2d/sprites/player/player-walk.png", 16, 32)
+    self.sprite_1 = newSprite(0,0,0, "assets/2d/sprites/player/humanoid-rotate-torso.png", 12, 20)
+    self.sprite_2 = newSprite(0,0,0, "assets/2d/sprites/player/humanoid-rotate-legs.png", 10, 12)
 
     -- 1 -> idle
-    self.sprite:newAnimation(1,1,1, 0.2)
-    self.sprite:pauseAtStart(1)
+    self.sprite_1:newAnimation(1,8,1, 0.2)
+    self.sprite_2:newAnimation(1,8,1, 0.2)
+    --self.sprite:pauseAtStart(1)
     -- 2 -> walk top
-    self.sprite:newAnimation(1,2,2, 0.2)
+    --self.sprite:newAnimation(1,2,2, 0.2)
     -- 3 -> walk right
-    self.sprite:newAnimation(1,2,3, 0.2)
+    --self.sprite:newAnimation(1,2,3, 0.2)
     -- 4 -> walk down
-    self.sprite:newAnimation(1,2,4, 0.2)
+    --self.sprite:newAnimation(1,2,4, 0.2)
 
-    self.sprite:changeAnimation(1)
+    self.sprite_1:changeAnimation(1)
+    self.sprite_2:changeAnimation(1)
+
+    self.stats = {}
+    self.stats["accuracy"] = 0 --  10 ->  0
+    self.stats["atk speed"] = 0.1 -- 0.1 -> 0.05
+    self.cursor.click_interval = self.stats["atk speed"]
 
     return self
 end
@@ -81,36 +89,36 @@ function Player:update(dt)
     -- Input handling
     -- Keyboard Input
     if love.keyboard.isDown("a") and love.keyboard.isDown("w") then
-      self.angle = math.pi*1.25
-      self.sprite:changeAnimation(2)
+        self.angle = math.pi*1.25
+        --self.sprite:changeAnimation(2)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("w")then
-      self.angle = math.pi*1.75 
-      self.sprite:changeAnimation(2)
+        self.angle = math.pi*1.75 
+        --self.sprite:changeAnimation(2)
     elseif love.keyboard.isDown("a") and love.keyboard.isDown("s") then
-      self.angle = math.pi*0.75
-      self.sprite:changeAnimation(4)
+        self.angle = math.pi*0.75
+        --self.sprite:changeAnimation(4)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("s") then
-      self.angle = math.pi*0.25
-      self.sprite:changeAnimation(4)
+        self.angle = math.pi*0.25
+        --self.sprite:changeAnimation(4)
     elseif love.keyboard.isDown("d") then
         self.angle = 0
-        self.sprite:changeAnimation(3)
+        --self.sprite:changeAnimation(3)
     elseif love.keyboard.isDown("a") then
         self.angle = math.pi
-        self.sprite:changeAnimation(3)
-        self.sprite:flipAnimation(-1, 1)
+        --self.sprite:changeAnimation(3)
+        --self.sprite:flipAnimation(-1, 1)
     elseif love.keyboard.isDown("w") then
         self.angle = math.pi*1.50
-        self.sprite:changeAnimation(2)
+        --self.sprite:changeAnimation(2)
     elseif love.keyboard.isDown("s") then
         self.angle = math.pi*0.50
-        self.sprite:changeAnimation(4)
+        --self.sprite:changeAnimation(4)
     else
         force = 0
         speed = 0
         --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
-        self.sprite:changeAnimation(1)
+        --self.sprite_1:changeAnimation(1)
     end
 
     -- Flying mode
@@ -121,16 +129,6 @@ function Player:update(dt)
     --     self.z = self.z - 50*dt
     --     self:setHeight()
     -- end
-
-    -- Mouse Input
-    if self.cursor:click() then
-        --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-        --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
-        --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        local angle = -1*(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y))
-        --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, 4, 100, angle, "simple player"}})
-    end
 
     self.body:setLinearVelocity(math.cos(self.angle) * speed, math.sin(self.angle) * speed)
 
@@ -193,21 +191,40 @@ function Player:update(dt)
         end
     end
 
+    -- Mouse Input
+    if self.cursor:click() then
+        --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+        --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
+        --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
+        local angle = -1*(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/100)        
+        --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
+        dx, dy = 0, 0
+        if speed ~= 0 then
+            --print("hello")
+            dx, dy = self.body:getLinearVelocity()
+            dx, dy = dx, dy
+        end
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, dx, dy, angle, "simple player"}})
+    end
+
     -- Animation Handleling
 
-    self.sprite:update(dt)
+    self.sprite_1:update(dt)
+    self.sprite_2:update(dt)
 
 
     self:setHeight()
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    self.sprite:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z + 0.4)
+    self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z - 0.5)
 end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
         --self.shadow:draw(shader, camera, shadow_map)
     else
-        self.sprite:draw(billboardShader, current_camera, shadow_map)
+        self.sprite_1:draw(billboardShader, current_camera, shadow_map)
+        self.sprite_2:draw(billboardShader, current_camera, shadow_map)
         --self.model:draw(shader, camera, shadow_map)
     end
     
