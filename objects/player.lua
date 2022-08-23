@@ -56,22 +56,49 @@ local function newPlayer(x, y, z, cursor)
     self.shadow = newShadow(self)
 
     -- Animations
-    self.sprite_1 = newSprite(0,0,0, "assets/2d/sprites/player/humanoid-rotate-torso.png", 12, 20)
-    self.sprite_2 = newSprite(0,0,0, "assets/2d/sprites/player/humanoid-rotate-legs.png", 10, 12)
+    local sheet = love.graphics.newImage("assets/2d/sprites/player/player.png")
+    self.sprite_1 = newSprite(0,0,0, sheet, 40, 40)
+    self.sprite_2 = newSprite(0,0,0, sheet, 40, 40)
 
-    -- 1 -> idle
-    self.sprite_1:newAnimation(1,8,1, 0.2)
-    self.sprite_2:newAnimation(1,8,1, 0.2)
-    --self.sprite:pauseAtStart(1)
-    -- 2 -> walk top
-    --self.sprite:newAnimation(1,2,2, 0.2)
-    -- 3 -> walk right
-    --self.sprite:newAnimation(1,2,3, 0.2)
-    -- 4 -> walk down
-    --self.sprite:newAnimation(1,2,4, 0.2)
+    local animations_init = {}
+    -- ["name"] = {"torso" = {first_1, last_1, row, time, angles}, "legs" = {first_1, last_1, row, time, angles}}
+    animations_init["idle"] = {torso = {1, 2, 1, 0.8, 5}, legs = {9, 9, 1, 0.8, 5}}
+    animations_init["run"] = {torso = {1, 4, 6, 0.2, 5}, legs = {9, 12, 6, 0.2, 5}}
 
-    self.sprite_1:changeAnimation(1)
-    self.sprite_2:changeAnimation(1)
+    self.animations = {}
+    for anim_name, anim in pairs(animations_init) do
+        -- ["name"] = {torso = {{angle = index}, ... }, legs = {{angle = index}, ... ]}
+        self.animations[anim_name] = {}
+        for body_part, frame_info in pairs(anim) do
+            if body_part == "torso" then
+                self.animations[anim_name]["torso"] = {}
+                for angle = 1, frame_info[5], 1 do
+                    local index = self.sprite_1:newAnimation(frame_info[1], frame_info[2], frame_info[3] + (angle - 1), frame_info[4])
+                    self.animations[anim_name]["torso"][angle] = index
+                end
+            elseif body_part == "legs" then
+                self.animations[anim_name]["legs"] = {}
+                for angle = 1, frame_info[5], 1 do
+                    local index = self.sprite_2:newAnimation(frame_info[1], frame_info[2], frame_info[3] + (angle - 1), frame_info[4])
+                    self.animations[anim_name]["legs"][angle] = index
+                end
+            end
+        end
+    end
+
+    -- for name, anim in pairs(self.animations) do
+    --     print(name)
+    --     for part, angle_index_pairs in pairs(anim) do
+    --         print(part)
+    --         for angle, index in pairs(angle_index_pairs) do
+    --             print(angle, index)
+    --         end
+    --     end
+    -- end
+
+    self:setAnimation("idle", 4, 1, 1)
+    self.last_angles_index = 4
+
 
     self.stats = {}
     self.stats["accuracy"] = 0 --  10 ->  0
@@ -90,35 +117,34 @@ function Player:update(dt)
     -- Keyboard Input
     if love.keyboard.isDown("a") and love.keyboard.isDown("w") then
         self.angle = math.pi*1.25
-        --self.sprite:changeAnimation(2)
+        self:setAnimation("run", 2, -1, 1)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("w")then
         self.angle = math.pi*1.75 
-        --self.sprite:changeAnimation(2)
+        self:setAnimation("run", 2, 1, 1)
     elseif love.keyboard.isDown("a") and love.keyboard.isDown("s") then
         self.angle = math.pi*0.75
-        --self.sprite:changeAnimation(4)
+        self:setAnimation("run", 4, -1, 1)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("s") then
         self.angle = math.pi*0.25
-        --self.sprite:changeAnimation(4)
+        self:setAnimation("run", 4, 1, 1)
     elseif love.keyboard.isDown("d") then
         self.angle = 0
-        --self.sprite:changeAnimation(3)
+        self:setAnimation("run", 3, 1, 1)
     elseif love.keyboard.isDown("a") then
         self.angle = math.pi
-        --self.sprite:changeAnimation(3)
-        --self.sprite:flipAnimation(-1, 1)
+        self:setAnimation("run", 3, -1, 1)
     elseif love.keyboard.isDown("w") then
         self.angle = math.pi*1.50
-        --self.sprite:changeAnimation(2)
+        self:setAnimation("run", 1, 1, 1)
     elseif love.keyboard.isDown("s") then
         self.angle = math.pi*0.50
-        --self.sprite:changeAnimation(4)
+        self:setAnimation("run", 5, 1, 1)
     else
         force = 0
         speed = 0
         --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
-        --self.sprite_1:changeAnimation(1)
+        self:setAnimation("idle", self.last_angles_index, nil)
     end
 
     -- Flying mode
@@ -215,8 +241,8 @@ function Player:update(dt)
 
     self:setHeight()
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z + 0.4)
-    self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z - 0.5)
+    self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.2, self.z/SCALE3D.z - 0.6)
+    self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.15, self.z/SCALE3D.z - 0.6)
 end
 
 function Player:draw(shader, camera, shadow_map)
@@ -232,6 +258,18 @@ end
 
 function Player:setPosition(x, y)
     self.body:setPosition(x, y)
+end
+
+function Player:setAnimation(name, angle, flip_x, flip_y)
+    local anim = self.animations[name]
+    self.sprite_1:changeAnimation(anim["torso"][angle], flip_x, flip_y)
+    self.sprite_2:changeAnimation(anim["legs"][angle], flip_x, flip_y)
+    self.last_angles_index = angle
+end
+
+function Player:flipAnimation(x, y)
+    self.sprite_1:flipAnimation(x, y)
+    self.sprite_2:flipAnimation(x, y)
 end
 
 function Player:setHeight()

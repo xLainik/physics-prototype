@@ -163,6 +163,9 @@ function love.load()
 	-- Tiles
 	tiles = g3d.newModel(g3d.loadObj("maps/Test/Test map.obj", false, true), "maps/Test/tileset.png", {0,0,0}, {0,0,math.pi/2})
 
+	test_model = g3d.newModel(g3d.loadObj("assets/3d/Base model test.obj", false, true), "assets/3d/white_texture.png", {4,-4,2.35}, {0,0,0})
+	rot_timer = 0
+
 	-- local newTile = require("objects/tile")
 
 	-- -- Read tiled layers for hitboxes and tile placement
@@ -352,6 +355,8 @@ function love.update(dt)
 
 	--main_camera:moveCamera(cam_dx, cam_dy, 0)
 
+	rot_timer = rot_timer - 0.8*dt
+
 	fps = love.timer.getFPS()
 end
 
@@ -433,6 +438,9 @@ function love.draw(dt)
 		--tile_imesh:draw(myShader, current_camera, false)
 		tiles:draw(myShader, current_camera, false)
 	end
+
+	test_model:setRotation(0,0,rot_timer)
+	test_model:draw(myShader, current_camera, false)
 
 	projectile_imesh:draw(billboardShader, current_camera, false)
 

@@ -7,7 +7,11 @@ local function newSprite(x,y,z, spritesheet_path, frame_width, frame_height, bor
     self.frame_width = frame_width
     self.frame_height = frame_height
 
-    self.sheet = love.graphics.newImage(spritesheet_path)
+    if type(spritesheet_path) == "string" then
+        self.sheet = love.graphics.newImage(spritesheet_path)
+    else
+        self.sheet =  spritesheet_path
+    end
     self.grid = anim8.newGrid(frame_width, frame_height, self.sheet:getWidth(), self.sheet:getHeight(), 0, 0, border or 0)
     
     self.total_frames = self.sheet:getWidth()/self.frame_width
@@ -43,8 +47,8 @@ function Sprite:newAnimation(frame_1, frame_2, row, intervals)
     return index
 end
 
-function Sprite:changeAnimation(index)
-    self:flipAnimation(1, 1)
+function Sprite:changeAnimation(index, flip_x, flip_y)
+    self:flipAnimation(flip_x, flip_y)
     self:setSpeed(1)
     self.current_anim = index
 end
@@ -60,7 +64,9 @@ function Sprite:pauseAtEnd(index)
 end
 
 function Sprite:flipAnimation(flipH, flipV)
-    self.flipVertex = {flipH, flipV}
+    if flipH ~= nil then
+        self.flipVertex = {flipH, flipV}
+    end
 end
 
 function Sprite:setSpeed(speed)
