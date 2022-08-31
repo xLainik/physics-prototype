@@ -20,7 +20,6 @@ mat4 biasMatrix = mat4( // change projected depth values from -1 - 1 to 0 - 1
     );
 
 varying vec4 project; //shadow projected vertex
-bool smoothShadows = false; //Bilinear Filtering
 
 uniform bool isInstanced;
 varying vec2 instanceUVs;
@@ -111,24 +110,17 @@ varying vec2 instanceUVs;
         vec2 shadowMapCoord = ((project.xy)/project.w); //Where this vertex is on the shadowMap
         float shadowMapPixelDist;
         float inShadow;
-        //SHADOW SMOOTHING
-        if (smoothShadows == true) {
-            //1. Unquote the stuff here
-            //2. Unquote sampler2Dshadow
-            //3. Unquote the depth sample mode in sun.lua
-            //shadowMapPixelDist = shadow2DProj(shadowMap, project-shadowBias, shadowBias).r; //Closest pixel to camera according to shadowMap
-            //inShadow = 1.0-shadowMapPixelDist;
-        } else {
-            shadowMapPixelDist = Texel(shadowMapImage, shadowMapCoord).r;
-            float M1 = shadowMapPixelDist;
-            float M2 = shadowMapPixelDist * shadowMapPixelDist;
-            float t = step(pixelDist, M1);
-            float SigmaSquare = max(M2 - M1*M1, 0.0000002);
-            float dif = (t - M1);
-            float PMaxT = SigmaSquare/(SigmaSquare + (dif*dif));
-            inShadow = 1 - clamp(max(t, PMaxT), 0, 1);
-            //inShadow = mix(float(shadowMapPixelDist < pixelDist),0.0,1.0-float((shadowMapCoord.x >= 0.0) && (shadowMapCoord.y >= 0.0) && (shadowMapCoord.x <= 1.0) && (shadowMapCoord.y <= 1.0))); //0.0;
-        };
+        // Variance Shadow Mapping
+        shadowMapPixelDist = Texel(shadowMapImage, shadowMapCoord).r;
+        float M1 = shadowMapPixelDist;
+        float M2 = shadowMapPixelDist * shadowMapPixelDist;
+        float t = step(pixelDist, M1);
+        float SigmaSquare = max(M2 - M1*M1, 0.0000002);
+        float dif = (t - M1);
+        float PMaxT = SigmaSquare/(SigmaSquare + (dif*dif));
+        inShadow = 1 - clamp(max(t, PMaxT), 0, 1);
+        //inShadow = mix(float(shadowMapPixelDist < pixelDist),0.0,1.0-float((shadowMapCoord.x >= 0.0) && (shadowMapCoord.y >= 0.0) && (shadowMapCoord.x <= 1.0) && (shadowMapCoord.y <= 1.0))); //0.0;
+
 
         // calculates the dot product and clamp it between 0 and 1 (value < 0 becomes = to 0, and value > 1 becomes = to 1)
         float dot_result = dot(normal, ld_normal);

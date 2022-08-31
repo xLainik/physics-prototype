@@ -20,11 +20,17 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
     if self.type == "simple player" then
         self.uvs = {0, 0}
         self.radius = 4
-        self.speed = 100
-        self.y = self.y -4
+        self.speed = 120
+        self.y = self.y
         self.z = self.z
-    end 
+        self.z_offset = 3 + self.depth/2
+        self.inactive_timer = 0
+    end
 
+    self.timer = 0
+    --self.max_timer = 16 - self.speed*(1/20) --120 speed = 10 seconds (MAX = 320)
+    self.max_timer = 16 - 0.0002*self.speed*self.speed --120 speed = 13 (MAX = 280)
+    
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
 
@@ -35,22 +41,40 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
+    self.body:setFixedRotation(true)
     self.body:setBullet(true) --slow processing
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape)
     self.body:setMass(0)
 
+    self.body:setActive(false)
+
     -- Fixture Category and Mask
+
+    -- Flat hitbox
+    --self.flat_x, self.flat_y = self.body:getX(), (self.body:getY()) - self.z_offset
+
+    --self.shape_flat = love.physics.newRectangleShape(self.width_flat, self.height_flat*(0.8125))
 
     -- More type options adjustments
     if self.type == "simple player" then
-        self.fixture:setCategory(6)
+        --self.shape_flat = love.physics.newCircleShape(self.radius)
+        self.width_flat, self.height_flat = 8, 8/0.8125
+        local x, y = self.width_flat/2, self.height_flat/2 
+        self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_offset, x, -y -self.z_offset, -x, y -self.z_offset, x, y -self.z_offset)
+
+        self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat, 0.5)
+        self.fixture:setCategory(1)
+        self.fixture_flat:setCategory(6)
+        self.hit_set = {nil, nil, true, true}
     end
+
+    self.fixture_flat:setSensor(true)
 
     self:setHeight()
 
     --self:setVelocity(self.speed, self.angle)
-    print(entity_dx, entity_dy)
+    --print(entity_dx, entity_dy)
     self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
 
     -- Shadow
@@ -67,7 +91,17 @@ end
 
 function Projectile:update(dt)
     self.x, self.y = self.body:getX(), self.body:getY()
-    
+
+    self.timer = self.timer + dt
+
+    if self.timer > self.inactive_timer then
+        self.body:setActive(true)
+    end
+
+    if self.timer > self.max_timer then
+        self.active = false
+    end
+
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
     --self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
@@ -75,14 +109,16 @@ function Projectile:update(dt)
 end
 
 function Projectile:debugDraw()
-    love.graphics.setColor(0.9, 0.8, 0.9)
-    love.graphics.setLineWidth(2)
-    love.graphics.circle("line", self.x, self.y, self.radius, 6)
+    --print("hello")
+    --love.graphics.setColor(0.9, 0.8, 0.9)
+    love.graphics.setLineWidth(1)
+    love.graphics.circle("line", self.flat_x, self.flat_y, self.radius, 6)
+    --love.graphics.rectangle("line", self.flat_x, self.flat_y, self.width_flat, self.height_flat)
 end
 
 function Projectile:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        --self.shadow:draw(shader, camera, shadow_map)
+        self.shadow:draw(shader, camera, shadow_map)
     else
         --self.model:draw(shader, camera, shadow_map)
     end
@@ -95,9 +131,8 @@ function Projectile:destroyMe(external_index)
     projectiles[external_index] = swap_obj
     projectiles[external_index].index = external_index
     projectiles[external_index].shadow.index = self.shadow.index
-    
-    self.body:destroy()
 
+    self.body:destroy()
 end
 
 function Projectile:setHeight()
@@ -119,13 +154,12 @@ function Projectile:setHeight()
         end
     end
 
-    if self.type == "simple player" then
-        table.insert(mask, 2)
-        table.insert(mask, 6)
-    end
     -- category 1 are shadows
-    self.fixture:setMask(1, unpack(mask))
+    self.fixture:setMask(1,3,4,5,6,7,8,9, unpack(mask))
     self.fixture:setUserData(self)
+
+    self.fixture_flat:setMask(1,2,3,4,5,7,8,9, unpack(mask))
+    self.fixture_flat:setUserData(self)
 end
 
 function Projectile:gotHit(entity, xn, yn)
@@ -134,6 +168,17 @@ function Projectile:gotHit(entity, xn, yn)
 end
 function Projectile:exitHit(entity, xn, yn)
     --print("Projectile exited a collision")
+end
+
+function Projectile:hitboxGotHit(entity)
+    local category = entity.fixture:getCategory()
+    --print("Projectile Hitbox got hit: ", category)
+    if self.hit_set[category] ~= nil then
+        self.active = false
+    end
+end
+function Projectile:hitboxExitHit(entity)
+    --print("Projectile Hitbox exited a collision")
 end
 
 return newProjectile

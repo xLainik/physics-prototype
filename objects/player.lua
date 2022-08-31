@@ -10,11 +10,14 @@ local function newPlayer(x, y, z, cursor)
     self.x = x or 50
     self.y = y or 50
     self.z = z or 40
+
     self.radius = 4.5
 
     self.depth = 24
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
+
+    self.z_offset = self.depth/2
 
     self.angle = 0
 
@@ -40,6 +43,7 @@ local function newPlayer(x, y, z, cursor)
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
+    self.body:setFixedRotation(true)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
     self.body:setMass(2)
@@ -50,10 +54,25 @@ local function newPlayer(x, y, z, cursor)
 
     -- Fixture Category and Mask
     self.fixture:setCategory(2)
-    self:setHeight()
+
+    -- Flat hitbox
+    self.width_flat, self.height_flat = 6, 16/0.8125
+    --self.flat_x, self.flat_y = self.body:getX(), (self.body:getY())*0.8125 - self.z_offset
+    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_offset - self.depth/2)*(0.8125)
+
+    --self.shape_flat = love.physics.newCircleShape(self.radius)
+    --self.shape_flat:setPoint(0, -self.z_offset)
+    local x, y = self.width_flat/2, self.height_flat/2 
+    self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_offset, x, -y -self.z_offset, -x, y -self.z_offset, x, y -self.z_offset)
+    self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat)
+
+    self.fixture_flat:setSensor(true)
+
+    self.fixture_flat:setCategory(6)
 
     -- Shadow
     self.shadow = newShadow(self)
+    self:setHeight()
 
     -- Animations
     local sheet = love.graphics.newImage("assets/2d/sprites/player/player.png")
@@ -102,7 +121,7 @@ local function newPlayer(x, y, z, cursor)
 
     self.stats = {}
     self.stats["accuracy"] = 0 --  10 ->  0
-    self.stats["atk speed"] = 0.1 -- 0.1 -> 0.05
+    self.stats["atk speed"] = 0.05 -- 0.6 -> 0.05
     self.cursor.click_interval = self.stats["atk speed"]
 
     return self
@@ -161,6 +180,9 @@ function Player:update(dt)
     --self.x, self.y = self.body:getX(), self.body:getY()
 
     self.x, self.y = math.floor(self.body:getX()), math.floor(self.body:getY())
+
+    --self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_offset
+    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_offset - self.height_flat/2)*(0.8125)
 
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
@@ -222,15 +244,15 @@ function Player:update(dt)
         --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
         --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
         --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        local angle = -1*(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.x, self.cursor.y) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/100)        
+        -- dx, dy = 0, 0
+        -- if speed ~= 0 then
+        --     dx, dy = self.body:getLinearVelocity()
+        --     dx, dy = dx, dy
+        -- end
+        local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/100)        
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        dx, dy = 0, 0
-        if speed ~= 0 then
-            --print("hello")
-            dx, dy = self.body:getLinearVelocity()
-            dx, dy = dx, dy
-        end
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {self.x, self.y, self.z, dx, dy, angle, "simple player"}})
+        local spawn_point = {self.x + math.cos(angle)*(16 + 20*math.abs(math.sin(angle))), (self.y - self.z_offset) + math.sin(angle)*(16 + 20*math.abs(math.sin(angle)))}
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, "simple player"}})
     end
 
     -- Animation Handleling
@@ -247,13 +269,23 @@ end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        --self.shadow:draw(shader, camera, shadow_map)
+        --self.shadow:draw(myShader, camera, shadow_map)
+        self.sprite_1:draw(shader, camera, shadow_map)
+        self.sprite_2:draw(shader, camera, shadow_map)
     else
-        self.sprite_1:draw(billboardShader, current_camera, shadow_map)
-        self.sprite_2:draw(billboardShader, current_camera, shadow_map)
-        --self.model:draw(shader, camera, shadow_map)
+        self.sprite_1:draw(shader, camera, shadow_map)
+        self.sprite_2:draw(shader, camera, shadow_map)
+        --self.model:draw(myShader, camera, shadow_map)
     end
     
+end
+
+function Player:debugDraw()
+    --love.graphics.setColor(0.9, 0.8, 0.9)
+    love.graphics.setLineWidth(1)
+    --print(current_camera.target[1], current_camera.target[2])
+    love.graphics.circle("line", self.flat_x, self.flat_y, self.radius)
+    --love.graphics.rectangle("line", self.flat_x, self.flat_y, self.width_flat, self.height_flat)
 end
 
 function Player:setPosition(x, y)
@@ -293,8 +325,11 @@ function Player:setHeight()
         end
     end
     -- category 1 are shadows
-    self.fixture:setMask(1, unpack(mask))
+    self.fixture:setMask(1,2,3,4,5,6,7,8,9, unpack(mask))
     self.fixture:setUserData(self)
+
+    self.fixture_flat:setMask(1,2,3,4,5,8,9, unpack(mask))
+    self.fixture_flat:setUserData(self)
 end
 
 function Player:gotHit(entity)
@@ -303,6 +338,14 @@ end
 function Player:exitHit(entity)
     --print("Player exited a collision")
 end
+
+function Player:hitboxGotHit(entity)
+    --print("Player Hitbox got hit: ", entity.fixture:getCategory())
+end
+function Player:hitboxExitHit(entity)
+    --print("Player Hitbox exited a collision")
+end
+
 function Player:updateShadow()
     local bottom_buffer = {}
     for i=#self.shadow.floor_buffer,1,-1 do

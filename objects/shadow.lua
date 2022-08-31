@@ -25,6 +25,10 @@ local function newShadow(entity, options)
 
         self.fixture:setUserData(self)
 
+        self.fixture_flat = love.physics.newFixture(entity.body, self.shape, 0.1)
+        self.fixture_flat:setSensor(true)
+        self.fixture_flat:setUserData(self)
+
         -- Shadow floor buffer
         --optional: including a permanent floor (in this case z=0)
         self.floor_buffer = {0}
@@ -32,7 +36,7 @@ local function newShadow(entity, options)
 
     --Instance
     local scale = (self.radius+1)*2/SCALE3D.x
-    --self.model = g3d.newModel(g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", {self.x, self.y, self.z}, {0,0,0}, scale)
+    self.model = g3d.newModel(g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", {self.x, self.y, self.z}, {0,0,0}, scale)
 
     self.index = shadow_imesh:addInstance(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z, scale,scale,scale, 0,0)
     --print("shadow index: ", self.index, self.radius)

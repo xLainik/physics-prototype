@@ -14,6 +14,8 @@ local function newCursor(x, y)
 
 	self.screen_x, self.screen_y = 0, 0
 
+	self.z_offset = 4/0.8125
+
 	self.state = "idle"
 
 	-- List of states
@@ -70,8 +72,8 @@ function Cursor:updateCoords(cam_target_x, cam_target_y, player_z)
 	self.model:setTranslation(self.x, self.y, self.z)
 end
 
-function Cursor:draw()
-	self.model:draw(nil, current_camera, false)
+function Cursor:draw(shader, camera, shadowmap)
+	self.model:draw(shader, camera, shadowmap)
 end
 
 

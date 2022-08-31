@@ -23,14 +23,17 @@ function love.load()
     SCREENSCALE = 16 -- 16 is 1 pixel of texture = 1 screen pixel
 
     love.graphics.setDefaultFilter("nearest") --no atialiasing
-	debug_canvas = love.graphics.newCanvas(1278, 720)
+	debug_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
+	debug_canvas:setFilter("nearest","nearest") --no atialiasing
 	main_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
 	main_canvas:setFilter("nearest","nearest") --no atialiasing
 
-	shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH*1.5, SCREENWIDTH, {format="depth24", readable=true})
+	DEBUG_OFFSET = {0, 0}
+
+	shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH*1.75, SCREENWIDTH*1.50, {format="depth24", readable=true})
     shadow_buffer_canvas:setFilter("nearest","nearest")
-    variance_shadow_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENWIDTH, {format="depth24", readable=true})
-    variance_shadow_canvas:setFilter("linear","linear")
+    --variance_shadow_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENWIDTH, {format="depth24", readable=true})
+    --variance_shadow_canvas:setFilter("linear","linear")
 
     CAM_OFFSET = {0, 0}
 
@@ -38,8 +41,9 @@ function love.load()
     DISTMAINCAM = 10
     CAMVECTOR_MAIN = { 0 * DISTMAINCAM, -3 * DISTMAINCAM, 4 * DISTMAINCAM}
     LIGHTVECTOR_TOP = { 0, -0.00001, 1 * DISTLIGHTCAM} -- in g3d units
-    LIGHTVECTOR_LF = {0.404508497 * DISTLIGHTCAM, 0.700629269 * DISTLIGHTCAM, -0.587785252 * DISTLIGHTCAM} -- in g3d units
-    CURRENTLIGHT_VECTOR = LIGHTVECTOR_TOP
+    LIGHTVECTOR_LF = {-0.404508497 * DISTLIGHTCAM, -0.700629269 * DISTLIGHTCAM, 0.587785252 * DISTLIGHTCAM} -- in g3d units
+    LIGHTVECTOR_ANGLE = { 0 * DISTMAINCAM, -1 * DISTMAINCAM, 1 * DISTMAINCAM}
+    CURRENTLIGHT_VECTOR = LIGHTVECTOR_LF
 
     LIGHTRAMP_TEXTURE = love.graphics.newImage("shaders/light_ramp.png")
 
@@ -49,7 +53,6 @@ function love.load()
 
     light_camera = g3d.newCamera(shadow_buffer_canvas:getWidth()/shadow_buffer_canvas:getHeight())
     light_camera:lookAt(CURRENTLIGHT_VECTOR[1], CURRENTLIGHT_VECTOR[2], CURRENTLIGHT_VECTOR[3], 0, 0, 0)
-    --light_camera:lookInDirection(nil,nil,nil, math.pi/3, -math.pi/5, 0)
     light_camera:updateOrthographicMatrix((SCREENWIDTH/2)/SCALE3D.x)
 
     current_camera = main_camera
@@ -77,20 +80,24 @@ function love.load()
 	math.randomseed(seed)
 
 	-- Fixture Category and Mask
-	--1 -> Everything else (Shadows for now)
-	--2 -> Player
+	--1 -> Everything else (Shadows and projectiles for now)
+	--2 -> Player 
     --3 -> Enemies 1
     --4 -> Enemies 2
-    --5 -> Enemies 3
-    --6 -> Player attacks 1
-    --7 -> Player attacks 2
-    --8 -> Enemy attacks 1
-    --9 -> Enemy attacks 2
+    --5 -> NPCs
+    --6 -> Hitboxes 1
+    --7 -> Hitboxes 2
+    --8 -> 
+    --9 -> 
     --10 -> Unbreakable terrain (Floor 0 - Barriers)
     --11 -> Unbreakable terrain (Floor 1)
     --12 -> Unbreakable terrain (Floor 2)
     --13 -> Unbreakable terrain (Floor 3)
     --14 -> Unbreakable terrain (Floor 4)
+
+
+    -- FLAT WORLD
+    --same as the original WORLD categories and mask
 
 	local newPlayer = require("objects/player")
 	local newCursor = require("objects/cursor")
@@ -118,18 +125,18 @@ function love.load()
 
 	cursor_1 = newCursor()
 	love.mouse.setVisible(false)
-	player_1 = newPlayer(70, 65, 200, cursor_1)
+	player_1 = newPlayer(70, 95, 100, cursor_1)
 
-	view = {"final_view", "3d_debug"}
+	view = {"final_view", "hitbox_debug", "3d_debug"}
 	view_index = 1
 	view_timer = 0.1
 
-	--enemy_1 = newEnemy(900, 300)
+	enemy_1 = newEnemy(120, 120, 100)
 	--enemy_2 = newEnemy(900, 400)
 
 	circle_1 = newCircle(30, 30, 8, 20)
 
-	projectile_imesh = newInstancedMesh(300, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
+	projectile_imesh = newInstancedMesh(600, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
 	projectiles = {}
 
 	--Level loader
@@ -162,9 +169,6 @@ function love.load()
 
 	-- Tiles
 	tiles = g3d.newModel(g3d.loadObj("maps/Test/Test map.obj", false, true), "maps/Test/tileset.png", {0,0,0}, {0,0,math.pi/2})
-
-	test_model = g3d.newModel(g3d.loadObj("assets/3d/Base model test.obj", false, true), "assets/3d/white_texture.png", {4,-4,2.35}, {0,0,0})
-	rot_timer = 0
 
 	-- local newTile = require("objects/tile")
 
@@ -222,6 +226,8 @@ function love.load()
 	-- end
 
 	fps = 60
+
+	counter= 0
 end
 
 function love.update(dt)
@@ -240,7 +246,7 @@ function love.update(dt)
 	else
 		if love.keyboard.isDown("k") then
 			view_timer = 0
-			if view_index < 2 then
+			if view_index < 3 then
 				view_index = view_index + 1
 			else
 				view_index = 1
@@ -275,7 +281,7 @@ function love.update(dt)
 	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
 	circle_1:update(dt)
 
-	--enemy_1:update(dt)
+	enemy_1:update(dt)
 	--enemy_2:update(dt)
 	
 
@@ -287,17 +293,22 @@ function love.update(dt)
 			--print("adding from SPAWNQUEUE: ", instance_index, obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 			obj.index = instance_index
 			table.insert(projectiles, obj)
+			counter = counter + 1
+			print(counter)
 		end
 	end
 
 	-- Projectiles update
 	for i, projectile in ipairs(projectiles) do
-		projectile:update(dt)
-		projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
-		--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
-		if not projectile.active then
-			projectile:destroyMe(i)
-			projectile.shadow:destroyMe()
+		if projectile.body:isDestroyed() == false then
+			if projectile.active == true then
+				projectile:update(dt)
+				projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
+				--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
+			else
+				projectile:destroyMe(i)
+				projectile.shadow:destroyMe()
+			end
 		end
 	end
 
@@ -326,8 +337,6 @@ function love.update(dt)
 		l_cam_dx = -0.0625
 	end
 
-	light_camera:moveCamera(l_cam_dx, l_cam_dy, 0)
-
 	--light grid = { 1/16 } in g3d units
 
 	--camera grid = { 0.0625 = 1/16, 0.3125 = 5/16, 0.3125 = 5/16 } in g3d units
@@ -353,9 +362,10 @@ function love.update(dt)
 	--main_camera:followPoint(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 	CAM_OFFSET = main_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 
-	--main_camera:moveCamera(cam_dx, cam_dy, 0)
+	light_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 
-	rot_timer = rot_timer - 0.8*dt
+	--main_camera:moveCamera(cam_dx, cam_dy, 0)
+	--light_camera:moveCamera(l_cam_dx, l_cam_dy, 0)
 
 	fps = love.timer.getFPS()
 end
@@ -383,16 +393,23 @@ function love.draw(dt)
 		--tile_imesh:draw(depthMapShader, light_camera, true)
 	end
 
-    love.graphics.setMeshCullMode("back")
+	tiles:draw(depthMapShader, light_camera, true)
 
-    shadow_imesh:draw(depthMapShader, light_camera, true)
+    --shadow_imesh:draw(depthMapShader, light_camera, true)
+
+    love.graphics.setMeshCullMode("none")
     
     -- Entities draw
     player_1:draw(depthMapShader, light_camera, true)
+    --cursor_1:draw(depthMapShader, light_camera, true)
 
-    for i, projectile in pairs(projectiles) do
-		projectile:draw(depthMapShader, light_camera, true)
-	end
+    enemy_1:draw(depthMapShader, light_camera, true)
+
+    love.graphics.setMeshCullMode("back")
+
+ --    for i, projectile in pairs(projectiles) do
+	-- 	projectile:draw(depthMapShader, light_camera, true)
+	-- end
 
     love.graphics.setDepthMode()
     love.graphics.setCanvas()
@@ -439,16 +456,59 @@ function love.draw(dt)
 		tiles:draw(myShader, current_camera, false)
 	end
 
-	test_model:setRotation(0,0,rot_timer)
-	test_model:draw(myShader, current_camera, false)
-
 	projectile_imesh:draw(billboardShader, current_camera, false)
 
 	--shadow_imesh:draw(billboardShader, current_camera, false)
 
     player_1:draw(billboardShader, current_camera, false)
 
-    cursor_1:draw(myShader, current_camera, false)
+    enemy_1:draw(myShader, current_camera, false)
+
+    --cursor_1:draw(myShader, current_camera, false)
+
+    if view[view_index] == "hitbox_debug" then
+	    -- Draw Flat hitboxes (projectiles and attack hitboxes)
+	    love.graphics.setDepthMode()
+		love.graphics.setCanvas(debug_canvas)
+
+		love.graphics.clear(0.0, 0.0, 0.0, 0.4)
+
+		DEBUG_OFFSET = {-current_camera.target[1]*16 + 229, current_camera.target[2]*13 + 136}
+		love.graphics.push()
+		love.graphics.translate( unpack(DEBUG_OFFSET) )
+
+		-- player_1:debugDraw()
+		-- enemy_1:debugDraw()
+
+		-- for _, projectile in pairs(projectiles) do
+	 --    	projectile:debugDraw()
+	 --    end
+
+	 --    for i, box in pairs(collisions) do
+	 --    	if box.fixture:getCategory() == 10 then
+		-- 		box:debugDraw()
+		-- 	end
+		-- end
+
+		for _, body in pairs(WORLD:getBodies()) do
+		    for _, fixture in pairs(body:getFixtures()) do
+		    	if true then
+			        local shape = fixture:getShape()
+
+			        if shape:typeOf("CircleShape") then
+			            local cx, cy = body:getWorldPoints(shape:getPoint())
+			            love.graphics.circle("line", cx, cy, shape:getRadius())
+			        elseif shape:typeOf("PolygonShape") then
+			            love.graphics.polygon("line", body:getWorldPoints(shape:getPoints()))
+			        else
+			            love.graphics.line(body:getWorldPoints(shape:getPoints()))
+			        end
+			    end
+		    end
+		end
+
+	    love.graphics.pop()
+	end
 
     -- Draw UI elements (Original Resolution)
     love.graphics.setDepthMode()
@@ -457,6 +517,10 @@ function love.draw(dt)
 	love.graphics.setCanvas()
 	--print(unpack(CAM_OFFSET))
 	love.graphics.draw(main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, unpack(CAM_OFFSET))
+	
+	if view[view_index] == "hitbox_debug" then
+		love.graphics.draw(debug_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE*0.8125, CAM_OFFSET[1], CAM_OFFSET[2])
+	end
 
 	-- Draw UI elements (Window size Resolution)
 	love.graphics.setColor(0.9, 0.8, 0.9)
@@ -464,7 +528,6 @@ function love.draw(dt)
 	circle_1:screenDraw()
 	cursor_1:screenDraw()
 	
-    
 end
 
 function love.mousemoved(x,y, dx,dy)
@@ -489,22 +552,32 @@ end
 function beginContact(a, b, contact)
 	user_a = a:getUserData()
 	user_b = b:getUserData()
-	user_a:gotHit(user_b)
-	user_b:gotHit(user_a)
+	if a:getCategory() == 6 then
+		user_a:hitboxGotHit(user_b)
+	else
+		user_a:gotHit(user_b)
+	end
+	if b:getCategory() == 6 then
+		user_b:hitboxGotHit(user_a)
+	else
+		user_b:gotHit(user_a)
+	end
     --print(a:getUserData().." colliding with "..b:getUserData().."\n")
 end
 
 function endContact(a, b, contact)
 	user_a = a:getUserData()
 	user_b = b:getUserData()
-	user_a:exitHit(user_b)
-	user_b:exitHit(user_a)
+	if a:getCategory() == 6 then
+		user_a:hitboxExitHit(user_b)
+	else
+		user_a:exitHit(user_b)
+	end
+	if b:getCategory() == 6 then
+		user_b:hitboxExitHit(user_a)
+	else
+		user_b:exitHit(user_a)
+	end
 end
 
-function preSolve(a, b, contact)
-	--pass
-end
 
-function postSolve(a, b, contact, normalimpulse, tangentimpulse)
-	--pass
-end
