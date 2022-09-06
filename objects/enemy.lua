@@ -36,18 +36,45 @@ local function newEnemy(x, y, z)
     local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
     self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
-    -- State machine
-    self.state_machine = machine.create({
-        initial = "idle",
-        events = {
-            { name = "wander", from = {"idle", "chasing"}, to = "wandering"},
-            { name = "chase",  from = "idle",  to = "chasing" },
-            { name = "calmdown", from = {"wandering", "chasing"}, to = "idle"}},
-        callbacks = {
-            onenterwandering = function() self:onenterwandering() end,
-            onenteridle = function() self:onenteridle() end
-            }
-        })
+    -- -- State machine
+    -- self.state_machine = machine.create({
+    --     initial = "idle",
+    --     events = {
+    --         { name = "wander", from = {"idle", "chasing"}, to = "wandering"},
+    --         { name = "chase",  from = "idle",  to = "chasing" },
+    --         { name = "calmdown", from = {"wandering", "chasing"}, to = "idle"}},
+    --     callbacks = {
+    --         onenterwandering = function() self:onenterwandering() end,
+    --         onenteridle = function() self:onenteridle() end
+    --         }
+    --     })
+
+    self.userData = {
+        position = {self.x, self.y},
+        stamina = 1,
+        alive = true
+        }
+
+    self.tree = tree.newTree()
+
+    self.idle_action = self.tree.createAction("idle", self.idle_inizializeFunction, self.idle_updateFunction, nil, self)
+    self.wander_action = self.tree.createAction("wander", self.wander_inizializeFunction, self.wander_updateFunction, self.wander_cleanUpFunction, self)
+    self.die_action = self.tree.createAction("die", self.die_inizializeFunction, nil, nil, self)
+    self.hasStamina_evaluator = self.tree.createEvaluator("hasStamina", self.hasStamina_evalFunction, self)
+    self.isAlive_evaluator = self.tree.createEvaluator("isAlive", self.isAlive_evalFunction, self)
+
+    self.isAlive_branch = self.tree.createBranch("isAlive")
+    self.hasStamina_branch = self.tree.createBranch("hasStamina")
+
+    self.isAlive_branch:setEvaluator(self.isAlive_evaluator)
+    self.isAlive_branch:addChild(self.die_action, 1)
+    self.isAlive_branch:addChild(self.hasStamina_branch, 2)
+
+    self.hasStamina_branch:setEvaluator(self.hasStamina_evaluator)
+    self.hasStamina_branch:addChild(self.idle_action, 1)
+    self.hasStamina_branch:addChild(self.wander_action, 2)
+
+    self.tree:setBranch(self.isAlive_branch)
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
@@ -59,7 +86,7 @@ local function newEnemy(x, y, z)
     self.fixture:setCategory(3)
 
     -- Flat hitbox
-    self.width_flat, self.height_flat = 16, 20
+    self.width_flat, self.height_flat = 16, 16
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, self.body:getY()*(0.8125) - self.height_flat/2 - self.z_offset
     self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_offset
 
@@ -77,18 +104,18 @@ local function newEnemy(x, y, z)
     self.shadow = newShadow(self)
     self:setHeight()
 
-    self.Ray = {
-        x1 = 0,
-        y1 = 0,
-        x2 = 0,
-        y2 = 0,
-        hitList = {}
-    }
+    -- self.Ray = {
+    --     x1 = 0,
+    --     y1 = 0,
+    --     x2 = 0,
+    --     y2 = 0,
+    --     hitList = {}
+    -- }
 
     return self
 end
 
-function Enemy:worldRayCastCallback(fixture, x, y, xn, yn, fraction)
+--[[function Enemy:worldRayCastCallback(fixture, x, y, xn, yn, fraction)
     local hit = {}
     hit.fixture = fixture
     hit.x, hit.y = x, y
@@ -97,43 +124,69 @@ function Enemy:worldRayCastCallback(fixture, x, y, xn, yn, fraction)
 
     table.insert(self.Ray.hitList, hit)
 
+end--]]
+
+-- AI Evaluation Functions -------------------------------------
+
+function Enemy:isAlive_evalFunction()
+    print("Evaluating alive", self.userData.alive)
+    return self.userData.alive ~= nil and self.userData.alive == true
 end
 
-function Enemy:onenteridle()
-    --print("onenteridle")
+function Enemy:hasStamina_evalFunction()
+    print("Evaluating stamina", self.userData.stamina)
+    return self.userData.stamina ~= nil and self.userData.stamina > 0
+end
+
+-- AI Actions -------------------------------------
+
+function Enemy:die_inizializeFunction()
+    print("Inizialize Die Action")
+    self.body:setLinearVelocity(0, 0)
+end
+
+function Enemy:idle_inizializeFunction()
+    print("Inizialize Idle Action")
     self.body:setLinearVelocity(0, 0)
     self.idle_timer = 0
 end
 
-function Enemy:onenterwandering()
-    --print("onenterwandering")
+function Enemy:idle_updateFunction(dt)
+    self.idle_timer = self.idle_timer + dt
+    --print("Update Idle Action", self.idle_timer)
+    return "RUNNING"
+end
+
+function Enemy:wander_inizializeFunction()
+    print("Inizialize Wander Action")
     self.speed = 8
     self.angle = math.random(0, 2*math.pi)
+    self.wander_timer = 0
+end
 
+function Enemy:wander_updateFunction(dt)
+    self.wander_timer = self.wander_timer + dt
+    --print("Update Wander Action", self.wander_timer)
+    if self.wander_timer > 2 then
+        return "TERMINATED"
+    else
+        return "RUNNING"
+    end
+end
+
+function Enemy:wander_cleanUpFunction()
+    print("CleanUp Wander Action")
+    self.speed = 0
     self.wander_timer = 0
 end
 
 function Enemy:update(dt)
 
-    -- State handling
-    if self.state_machine:is("idle") then
-        --print("new state: idle", tostring(self.idle_timer))
-        self.idle_timer = self.idle_timer + dt
-        if self.idle_timer > 2 then
-            --self.state_machine:wander()
-            --print("transition: wander")
+    -- Behavior tree update
+    self.tree:update(dt)
 
-        end
-    elseif self.state_machine:is("wandering") then
-        --print("new state: wandering", tostring(self.wander_timer))
-        self.wander_timer = self.wander_timer + dt
-
-        self.body:setLinearVelocity(math.cos(self.angle)*self.speed, math.sin(self.angle)*self.speed)
-
-        if self.wander_timer > 2 then
-            self.state_machine:calmdown()
-            --print("transition: calmdown")
-        end
+    if self.speed > 0 then
+        self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
     end
 
     -- Apply gravity

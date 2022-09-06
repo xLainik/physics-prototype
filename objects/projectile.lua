@@ -18,7 +18,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
 
     -- Set projectile type
     if self.type == "simple player" then
-        self.uvs = {0, 0}
+        self.uvs = {0/4, 0}
         self.radius = 4
         self.speed = 120
         self.y = self.y
@@ -59,7 +59,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
     -- More type options adjustments
     if self.type == "simple player" then
         --self.shape_flat = love.physics.newCircleShape(self.radius)
-        self.width_flat, self.height_flat = 8, 8/0.8125
+        self.width_flat, self.height_flat = 6, 6/0.8125
         local x, y = self.width_flat/2, self.height_flat/2 
         self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_offset, x, -y -self.z_offset, -x, y -self.z_offset, x, y -self.z_offset)
 

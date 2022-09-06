@@ -80,8 +80,9 @@ varying vec2 instanceUVs;
 
 #ifdef PIXEL
     
-    uniform vec3 light_color;
-    uniform vec3 shadow_color;
+    uniform vec4 light_color;
+    uniform vec4 shadow_color;
+    uniform vec4 ambient_color;
     uniform vec3 light_direction;
     uniform Image light_ramp_tex;
 
@@ -102,9 +103,6 @@ varying vec2 instanceUVs;
 
         // normalize the light direction just in case
         vec3 ld_normal = normalize(light_direction);
-
-        //TEST FOR SHADOW (Shadow Mapping)
-        vec3 shadowMapDir = 1.0*ld_normal; //should be the same as ambientVector, but for this game im stylizing the lighting
 
         float pixelDist = (project.z-0.0001)/project.w; //How far this pixel is from the camera
         vec2 shadowMapCoord = ((project.xy)/project.w); //Where this vertex is on the shadowMap
@@ -134,13 +132,13 @@ varying vec2 instanceUVs;
 
         vec4 light_lut = Texel(light_ramp_tex, vec2(dot_clamp, 0.0));
 
-        vec3 light_intensity = mix(vec3(0.0), light_color, light_lut.x);  // 0.0 mix has no efect
-        vec3 shadow_intensity = mix(shadow_color, vec3(1.0), light_lut.x); // 1.0 mix has no effect
+        vec3 light_intensity = mix(vec3(0.0), light_color.rgb, light_lut.x);  // 0.0 mix has no efect
+        vec3 shadow_intensity = mix(shadow_color.rgb, vec3(1.0), light_lut.x); // 1.0 mix has no effect
+
+        shadow_intensity = mix(vec3(1.0), shadow_intensity.rgb, shadow_color.a);
 
         texcolor.rgb *= shadow_intensity;
-        texcolor.rgb += light_intensity;
-
-        //return vec4(vec3(inShadow),1.0);
+        texcolor.rgb += light_intensity * light_color.a;
 
         return texcolor;
     }

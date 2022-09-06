@@ -5,6 +5,8 @@ function love.load()
 	WORLD = love.physics.newWorld(0, 0, true)
 	WORLD:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
+	tree = require("objects/behavior_tree")
+
 	-- Utility functions
 	require("libs/utils")
 
@@ -30,7 +32,7 @@ function love.load()
 
 	DEBUG_OFFSET = {0, 0}
 
-	shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH*1.75, SCREENWIDTH*1.50, {format="depth24", readable=true})
+	shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH*1.50, SCREENWIDTH*1.50, {format="depth24", readable=true})
     shadow_buffer_canvas:setFilter("nearest","nearest")
     --variance_shadow_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENWIDTH, {format="depth24", readable=true})
     --variance_shadow_canvas:setFilter("linear","linear")
@@ -60,11 +62,11 @@ function love.load()
 	current_camera:moveCamera(0.625*16, -0.3125*16, 0)
 
 
-    myShader_code = love.filesystem.read("shaders/test_shader_7.glsl")
+    myShader_code = love.filesystem.read("shaders/test_shader_8.glsl")
     myShader = love.graphics.newShader(myShader_code)
 
-    myShader:sendColor("light_color", {142/255, 79/255, 28/255})
-    myShader:sendColor("shadow_color", {94/255, 75/255, 194/255})
+    myShader:sendColor("light_color", {239/255, 118/255, 98/255, 100/255})
+    myShader:sendColor("shadow_color", {91/255, 152/255, 230/255, 168/255})
     myShader:send("light_direction", CURRENTLIGHT_VECTOR)
 	myShader:send("light_ramp_tex", LIGHTRAMP_TEXTURE)
 
@@ -226,8 +228,6 @@ function love.load()
 	-- end
 
 	fps = 60
-
-	counter= 0
 end
 
 function love.update(dt)
@@ -293,8 +293,6 @@ function love.update(dt)
 			--print("adding from SPAWNQUEUE: ", instance_index, obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 			obj.index = instance_index
 			table.insert(projectiles, obj)
-			counter = counter + 1
-			print(counter)
 		end
 	end
 
@@ -400,7 +398,7 @@ function love.draw(dt)
     love.graphics.setMeshCullMode("none")
     
     -- Entities draw
-    player_1:draw(depthMapShader, light_camera, true)
+    player_1:draw(billboardShader, light_camera, true)
     --cursor_1:draw(depthMapShader, light_camera, true)
 
     enemy_1:draw(depthMapShader, light_camera, true)

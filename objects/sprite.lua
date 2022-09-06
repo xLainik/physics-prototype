@@ -88,7 +88,7 @@ function Sprite:update(dt)
 end
 
 function Sprite:draw(shader, camera, shadow_map)
-    self.imesh:draw(billboardShader, camera, shadow_map, self.flipVertex)
+    self.imesh:draw(shader, camera, shadow_map, self.flipVertex)
 end
 
 return newSprite

@@ -17,7 +17,7 @@ local function newPlayer(x, y, z, cursor)
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
 
-    self.z_offset = self.depth/2
+    self.z_offset = self.depth/2 - 2
 
     self.angle = 0
 
@@ -28,12 +28,13 @@ local function newPlayer(x, y, z, cursor)
     self.top_floor = 1000
     self.bottom_floor = -1000
     self.on_ground = false
-    self.jump_max_speed = 150
+    self.jump_max_speed = 280
 
     self.dz = -8
     self.z_gravity = -8
-    self.max_falling = -200
+    self.max_falling = -120
     self.space_is_down = 0
+    self.space_up_factor = 20
 
     -- Coyote jump and jump buffering
     self.coyote_time = 0.1
@@ -120,8 +121,8 @@ local function newPlayer(x, y, z, cursor)
 
 
     self.stats = {}
-    self.stats["accuracy"] = 0 --  10 ->  0
-    self.stats["atk speed"] = 0.05 -- 0.6 -> 0.05
+    self.stats["accuracy"] = 40 --  100 ->  0
+    self.stats["atk speed"] = 0.2 -- 0.6 -> 0.05
     self.cursor.click_interval = self.stats["atk speed"]
 
     return self
@@ -223,7 +224,7 @@ function Player:update(dt)
 
     -- Apply gravity
     if not(self.on_ground) and self.dz > self.max_falling then
-        self.dz = self.dz + self.z_gravity - 10*(1 - self.space_is_down)
+        self.dz = self.dz + self.z_gravity - self.space_up_factor*(1 - self.space_is_down)
     end
 
     -- Check top and bottom floor, and then apply z velocity
@@ -249,9 +250,9 @@ function Player:update(dt)
         --     dx, dy = self.body:getLinearVelocity()
         --     dx, dy = dx, dy
         -- end
-        local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/100)        
+        local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        local spawn_point = {self.x + math.cos(angle)*(16 + 20*math.abs(math.sin(angle))), (self.y - self.z_offset) + math.sin(angle)*(16 + 20*math.abs(math.sin(angle)))}
+        local spawn_point = {self.x + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.y - self.z_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
         table.insert(SPAWNQUEUE, {group = "Projectile", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, "simple player"}})
     end
 
