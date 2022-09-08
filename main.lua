@@ -5,7 +5,8 @@ function love.load()
 	WORLD = love.physics.newWorld(0, 0, true)
 	WORLD:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
-	tree = require("objects/behavior_tree")
+	-- Decision Tree
+	tree = require("objects/decision_tree")
 
 	-- Utility functions
 	require("libs/utils")
@@ -61,7 +62,6 @@ function love.load()
 
 	current_camera:moveCamera(0.625*16, -0.3125*16, 0)
 
-
     myShader_code = love.filesystem.read("shaders/test_shader_8.glsl")
     myShader = love.graphics.newShader(myShader_code)
 
@@ -87,8 +87,8 @@ function love.load()
     --3 -> Enemies 1
     --4 -> Enemies 2
     --5 -> NPCs
-    --6 -> Hitboxes 1
-    --7 -> Hitboxes 2
+    --6 -> Entities Hitboxes 1
+    --7 -> Entities Hitboxes 2
     --8 -> 
     --9 -> 
     --10 -> Unbreakable terrain (Floor 0 - Barriers)
@@ -103,7 +103,7 @@ function love.load()
 
 	local newPlayer = require("objects/player")
 	local newCursor = require("objects/cursor")
-	local newEnemy = require("objects/enemy")
+	local newEnemy_Slime = require("objects/enemy_Slime")
 	local newBox = require("objects/box")
 	local newPolygon = require("objects/polygon")
 	local newCircle = require("objects/circle")
@@ -116,7 +116,7 @@ function love.load()
 	require("libs/utils") --utility functions
 
 	SPAWNFUNCTIONS = {}
-	SPAWNFUNCTIONS["Enemy"] = newEnemy
+	SPAWNFUNCTIONS["Enemy_Slime"] = newEnemy_Slime
 	SPAWNFUNCTIONS["Projectile"] = newProjectile
 	SPAWNFUNCTIONS["Box"] = newBox
 
@@ -133,8 +133,9 @@ function love.load()
 	view_index = 1
 	view_timer = 0.1
 
-	enemy_1 = newEnemy(120, 120, 100)
-	--enemy_2 = newEnemy(900, 400)
+	enemies = {}
+	table.insert(enemies, newEnemy_Slime(120, 120, 100))
+	--table.insert(enemies, newEnemy_Slime(220, 160, 100))
 
 	circle_1 = newCircle(30, 30, 8, 20)
 
@@ -281,10 +282,10 @@ function love.update(dt)
 	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
 	circle_1:update(dt)
 
-	enemy_1:update(dt)
-	--enemy_2:update(dt)
+	for i, enemy in ipairs(enemies) do
+    	enemy:update(dt)
+    end
 	
-
 	--Spawn the stuff from SPAWNQUEUE
 	for i, spawn in pairs(SPAWNQUEUE) do
 		obj = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
@@ -314,48 +315,53 @@ function love.update(dt)
 	for i, delete in pairs(DELETEQUEUE) do
 		if delete["group"] == "Projectile" then
 			table.remove(projectiles, swap_index)
+		elseif delete["group"] == "Enemy" then
+			print("remove from table")
+			table.remove(enemies, delete["index"])
 		end
 	end
+
+	--print(#enemies)
 
 	SPAWNQUEUE = {}
 	DELETEQUEUE = {}
 
 	--3D Cam update
 
-	local l_cam_dx, l_cam_dy = 0, 0
+	-- local l_cam_dx, l_cam_dy = 0, 0
 
-	if love.keyboard.isDown("h") then
-		l_cam_dy = 0.0625
-	elseif love.keyboard.isDown("n") then
-		l_cam_dy = -0.0625
-	end
-	if love.keyboard.isDown("b") then
-		l_cam_dx = 0.0625
-	elseif love.keyboard.isDown("m") then
-		l_cam_dx = -0.0625
-	end
+	-- if love.keyboard.isDown("h") then
+	-- 	l_cam_dy = 0.0625
+	-- elseif love.keyboard.isDown("n") then
+	-- 	l_cam_dy = -0.0625
+	-- end
+	-- if love.keyboard.isDown("b") then
+	-- 	l_cam_dx = 0.0625
+	-- elseif love.keyboard.isDown("m") then
+	-- 	l_cam_dx = -0.0625
+	-- end
 
-	--light grid = { 1/16 } in g3d units
+	-- --light grid = { 1/16 } in g3d units
 
-	--camera grid = { 0.0625 = 1/16, 0.3125 = 5/16, 0.3125 = 5/16 } in g3d units
-	cam_grid_pos = { math.floor((player_1.x/SCALE3D.x) / 0.0625)*0.0625, math.floor((player_1.y/SCALE3D.y) / 0.3125)*0.3125, math.floor((player_1.z/SCALE3D.z) / 0.3125)*0.3125 }
+	-- --camera grid = { 0.0625 = 1/16, 0.3125 = 5/16, 0.3125 = 5/16 } in g3d units
+	-- cam_grid_pos = { math.floor((player_1.x/SCALE3D.x) / 0.0625)*0.0625, math.floor((player_1.y/SCALE3D.y) / 0.3125)*0.3125, math.floor((player_1.z/SCALE3D.z) / 0.3125)*0.3125 }
 
-	local cam_dx, cam_dy = 0, 0
+	-- local cam_dx, cam_dy = 0, 0
 
-	if love.keyboard.isDown("up") then
-		cam_dy = 0.3125
-		cam_dy = 0.05
-	elseif love.keyboard.isDown("down") then
-		cam_dy = -0.3125
-		cam_dy = -0.05
-	end
-	if love.keyboard.isDown("right") then
-		cam_dx = 0.625
-		cam_dx = 0.05
-	elseif love.keyboard.isDown("left") then
-		cam_dx = -0.625
-		cam_dx = -0.05
-	end
+	-- if love.keyboard.isDown("up") then
+	-- 	cam_dy = 0.3125
+	-- 	cam_dy = 0.05
+	-- elseif love.keyboard.isDown("down") then
+	-- 	cam_dy = -0.3125
+	-- 	cam_dy = -0.05
+	-- end
+	-- if love.keyboard.isDown("right") then
+	-- 	cam_dx = 0.625
+	-- 	cam_dx = 0.05
+	-- elseif love.keyboard.isDown("left") then
+	-- 	cam_dx = -0.625
+	-- 	cam_dx = -0.05
+	-- end
 
 	--main_camera:followPoint(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 	CAM_OFFSET = main_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
@@ -401,7 +407,9 @@ function love.draw(dt)
     player_1:draw(billboardShader, light_camera, true)
     --cursor_1:draw(depthMapShader, light_camera, true)
 
-    enemy_1:draw(depthMapShader, light_camera, true)
+    for i, enemy in pairs(enemies) do
+    	enemy:draw(billboardShader, light_camera, true)
+    end
 
     love.graphics.setMeshCullMode("back")
 
@@ -460,7 +468,9 @@ function love.draw(dt)
 
     player_1:draw(billboardShader, current_camera, false)
 
-    enemy_1:draw(myShader, current_camera, false)
+    for i, enemy in pairs(enemies) do
+    	enemy:draw(billboardShader, current_camera, false)
+    end
 
     --cursor_1:draw(myShader, current_camera, false)
 

@@ -42,6 +42,14 @@ local function newPlayer(x, y, z, cursor)
     self.jump_buffer_time = 0.1
     self.jump_buffer_time_counter = 0
 
+    -- UserData
+    self.userData = {
+        position = {self.x, self.y},
+        spawn_position = {x, y},
+        stamina = 10,
+        hp = 100
+        }
+
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
     self.body:setFixedRotation(true)
@@ -80,6 +88,9 @@ local function newPlayer(x, y, z, cursor)
     self.sprite_1 = newSprite(0,0,0, sheet, 40, 40)
     self.sprite_2 = newSprite(0,0,0, sheet, 40, 40)
 
+    self.anim_angle = 3
+    self.anim_flip_x = 1
+
     local animations_init = {}
     -- ["name"] = {"torso" = {first_1, last_1, row, time, angles}, "legs" = {first_1, last_1, row, time, angles}}
     animations_init["idle"] = {torso = {1, 2, 1, 0.8, 5}, legs = {9, 9, 1, 0.8, 5}}
@@ -116,8 +127,8 @@ local function newPlayer(x, y, z, cursor)
     --     end
     -- end
 
-    self:setAnimation("idle", 4, 1, 1)
-    self.last_angles_index = 4
+    self:setAnimation("idle", 3, 1, 1)
+    self.last_angles_index = 3
 
 
     self.stats = {}
@@ -130,41 +141,37 @@ end
 
 function Player:update(dt)
 
-    local force = 60
     local speed = 16*4
 
     -- Input handling
     -- Keyboard Input
     if love.keyboard.isDown("a") and love.keyboard.isDown("w") then
         self.angle = math.pi*1.25
-        self:setAnimation("run", 2, -1, 1)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("w")then
-        self.angle = math.pi*1.75 
-        self:setAnimation("run", 2, 1, 1)
+        self.angle = math.pi*1.75
     elseif love.keyboard.isDown("a") and love.keyboard.isDown("s") then
         self.angle = math.pi*0.75
-        self:setAnimation("run", 4, -1, 1)
     elseif love.keyboard.isDown("d") and love.keyboard.isDown("s") then
         self.angle = math.pi*0.25
-        self:setAnimation("run", 4, 1, 1)
     elseif love.keyboard.isDown("d") then
         self.angle = 0
-        self:setAnimation("run", 3, 1, 1)
     elseif love.keyboard.isDown("a") then
         self.angle = math.pi
-        self:setAnimation("run", 3, -1, 1)
     elseif love.keyboard.isDown("w") then
         self.angle = math.pi*1.50
-        self:setAnimation("run", 1, 1, 1)
     elseif love.keyboard.isDown("s") then
         self.angle = math.pi*0.50
-        self:setAnimation("run", 5, 1, 1)
     else
         force = 0
         speed = 0
         --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
         self:setAnimation("idle", self.last_angles_index, nil)
+    end
+
+    self:getAnimationAngle()
+    if speed > 0 then
+        self:setAnimation("run", self.anim_angle, self.anim_flip_x, 1)
     end
 
     -- Flying mode
@@ -175,6 +182,8 @@ function Player:update(dt)
     --     self.z = self.z - 50*dt
     --     self:setHeight()
     -- end
+
+    self:updateUserData()
 
     self.body:setLinearVelocity(math.cos(self.angle) * speed, math.sin(self.angle) * speed)
 
@@ -257,7 +266,6 @@ function Player:update(dt)
     end
 
     -- Animation Handleling
-
     self.sprite_1:update(dt)
     self.sprite_2:update(dt)
 
@@ -266,6 +274,10 @@ function Player:update(dt)
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
     self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.2, self.z/SCALE3D.z - 0.6)
     self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.15, self.z/SCALE3D.z - 0.6)
+end
+
+function Player:updateUserData()
+    self.userData.position = {self.x, self.y}
 end
 
 function Player:draw(shader, camera, shadow_map)
@@ -303,6 +315,18 @@ end
 function Player:flipAnimation(x, y)
     self.sprite_1:flipAnimation(x, y)
     self.sprite_2:flipAnimation(x, y)
+end
+
+function Player:getAnimationAngle()
+    local index = math.floor(((self.angle)/(2*3.14)) * 8 + 3)
+    local sign = 1
+    if index > 8 then index = index - 8 end
+    if index > 5 then
+        index = 5 - (index - 5)
+        sign = -1
+    end
+    self.anim_angle = index
+    self.anim_flip_x = sign
 end
 
 function Player:setHeight()

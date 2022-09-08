@@ -35,9 +35,9 @@ local function newSprite(x,y,z, spritesheet_path, frame_width, frame_height, bor
     return self
 end
 
-function Sprite:newAnimation(frame_1, frame_2, row, intervals)
+function Sprite:newAnimation(frame_1, frame_2, row, intervals, onLoop)
     local index = #self.animations + 1
-    self.animations[index] = anim8.newAnimation(self.grid(tostring(frame_1).."-"..tostring(frame_2), row), intervals)
+    self.animations[index] = anim8.newAnimation(self.grid(tostring(frame_1).."-"..tostring(frame_2), row), intervals, onLoop)
     local lenght = frame_2-frame_1
     self.uvs[index] = {}
     for i = 0, lenght, 1 do

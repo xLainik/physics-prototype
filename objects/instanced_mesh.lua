@@ -1,8 +1,6 @@
 local InstancedMesh = {}
 InstancedMesh.__index = InstancedMesh
 
-local ffi = require("ffi")
-
 local function newInstancedMesh(max_instances, verts, texture, tile_width, tile_height, options)
     local self = setmetatable({}, InstancedMesh)
 
@@ -82,6 +80,7 @@ local function newInstancedMesh(max_instances, verts, texture, tile_width, tile_
     self.instanced_positions = {}
     self.instanced_scales = {}
     self.instanced_uvs = {}
+    self.instanced_matrix = {}
 
     self.instanced_count = 0
 

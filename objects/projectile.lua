@@ -16,6 +16,8 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
 
     self.depth = 10
 
+    self.userData = {}
+
     -- Set projectile type
     if self.type == "simple player" then
         self.uvs = {0/4, 0}
@@ -25,6 +27,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
         self.z = self.z
         self.z_offset = 3 + self.depth/2
         self.inactive_timer = 0
+        self.userData.damage = 2
     end
 
     self.timer = 0

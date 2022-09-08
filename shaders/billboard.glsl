@@ -21,6 +21,11 @@ uniform vec2 flipVertex;
     attribute vec3 InstanceScale;
     attribute vec2 InstanceUVs;
 
+    attribute vec4 ModelMat1;
+    attribute vec4 ModelMat2;
+    attribute vec4 ModelMat3;
+    attribute vec4 ModelMat4;
+
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
         if (isInstanced == true)
