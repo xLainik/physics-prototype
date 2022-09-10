@@ -128,6 +128,20 @@ function matrix:setViewMatrix(eye, target, up)
 end
 
 
+function matrix:getMatrixRow(row)
+    local row = {}
+    local start = (row-1)*4 + 1
+    for i=start, start+3, 1 do
+        table.insert(row, self[i])
+    end
+    return row
+end
+
+function matrix:getMatrixRows()
+    return {self[1],  self[5],  self[9],  self[13]}, {self[2],  self[6],  self[10],  self[14]}, {self[3],  self[7], self[11], self[15]}, {self[4], self[8], self[12], self[16]}
+end
+
+
 --- Cirno's perfect math library: Invert a matrix.
 -- @tparam mat4 outmat Matrix to store the result
 -- @tparam mat4 mat Matrix to invert

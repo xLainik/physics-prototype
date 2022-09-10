@@ -26,16 +26,11 @@ local function newEnemy(x, y, z)
     self.top_floor = 1000
     self.bottom_floor = -1000
 
-    self.idle_timer = 0
-    self.wander_timer = 0
-    self.chargeAttack_timer = 0
-    self.die_timer = 0
-
     self.depth = 24
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
 
-    self.z_offset = 4
+    self.z_flat_offset = 8
 
     local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
     self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
@@ -56,30 +51,45 @@ local function newEnemy(x, y, z)
     self.userData = {
         position = {self.x, self.y},
         spawn_position = {x, y},
-        stamina = 1,
-        hp = 10
+        stamina = 0,
+        hp = 10,
+        stun = false,
+        enemy_damage = 0
         }
 
+    self.idle_timer = 0
+    self.wander_timer = 0
+    self.chargeAttack_timer = 0
+    self.die_timer = 0
+    self.stun_timer = 0
+    
     self.tree = tree.newTree(self)
 
     self.idle_action = self.tree.createAction("idle", self.idle_inizializeFunction, self.idle_updateFunction, nil, self)
+    self.stun_action = self.tree.createAction("stun", self.stun_inizializeFunction, self.stun_updateFunction, self.stun_cleanUpFunction, self)
     self.wander_action = self.tree.createAction("wander", self.wander_inizializeFunction, self.wander_updateFunction, self.wander_cleanUpFunction, self)
     self.die_action = self.tree.createAction("die", self.die_inizializeFunction, self.die_updateFunction, self.die_cleanUpFunction, self)
     self.seek_action = self.tree.createAction("seek", self.seekVel_inizializeFunction, self.seekVel_updateFunction, self.seekVel_cleanUpFunction, self)
     self.chargeAttack_action = self.tree.createAction("chargeAttack", self.chargeAttack_inizializeFunction, self.chargeAttack_updateFunction, self.chargeAttack_cleanUpFunction, self)
 
     self.hasStamina_evaluator = self.tree.createEvaluator("hasStamina", self.hasStamina_evalFunction, self)
+    self.isStun_evaluator = self.tree.createEvaluator("isStun", self.isStun_evalFunction, self)
     self.isAlive_evaluator = self.tree.createEvaluator("isAlive", self.isAlive_evalFunction, self)
     self.checkPlayer_evaluator = self.tree.createEvaluator("checkPlayer", self.checkPlayer_evalFunction, self)
 
     self.isAlive_branch = self.tree.createBranch("isAlive")
+    self.isStun_branch = self.tree.createBranch("isStun")
     self.hasStamina_branch = self.tree.createBranch("hasStamina")
     self.checkPlayer_branch = self.tree.createBranch("checkPlayer")
     self.attackPlayer_branch = self.tree.createBranch("attackPlayer")
 
     self.isAlive_branch:setEvaluator(self.isAlive_evaluator)
     self.isAlive_branch:addChild(self.die_action, 1)
-    self.isAlive_branch:addChild(self.hasStamina_branch, 2)
+    self.isAlive_branch:addChild(self.isStun_branch, 2)
+
+    self.isStun_branch:setEvaluator(self.isStun_evaluator)
+    self.isStun_branch:addChild(self.hasStamina_branch, 1)
+    self.isStun_branch:addChild(self.stun_action, 2)
 
     self.hasStamina_branch:setEvaluator(self.hasStamina_evaluator)
     self.hasStamina_branch:addChild(self.idle_action, 1)
@@ -103,13 +113,13 @@ local function newEnemy(x, y, z)
 
     -- Flat hitbox
     self.width_flat, self.height_flat = 16, 18
-    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, self.body:getY()*(0.8125) - self.height_flat/2 - self.z_offset
-    self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_offset
+    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, self.body:getY()*(0.8125) - self.height_flat/2 - self.z_flat_offset
+    self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
 
     --self.shape_flat = love.physics.newCircleShape(self.radius)
-    --self.shape_flat:setPoint(0, -self.z_offset)
+    --self.shape_flat:setPoint(0, -self.z_flat_offset)
     local x, y = self.width_flat/2, self.height_flat/2 
-    self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_offset, x, -y -self.z_offset, -x, y -self.z_offset, x, y -self.z_offset)
+    self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_flat_offset, x, -y -self.z_flat_offset, -x, y -self.z_flat_offset, x, y -self.z_flat_offset)
     self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat, 0.5)
 
     self.fixture_flat:setSensor(true)
@@ -123,6 +133,8 @@ local function newEnemy(x, y, z)
     -- Animations
     local sheet = love.graphics.newImage("assets/2d/sprites/enemy_slime/slime.png")
     self.sprite = newSprite(0,0,0, sheet, 24, 24)
+    self.y_sprite_offset = -0.3
+    self.z_sprite_offset = (12/16)*math.cos(0.927295218)
 
     self.anim_angle = 2
     self.anim_flip_x = 1
@@ -130,7 +142,7 @@ local function newEnemy(x, y, z)
     local animations_init = {}
     -- ["name"] = {first_1, last_1, row, time, angles}
     animations_init["idle"] = {1, 2, 1, 0.8, 2, nil}
-    animations_init["attack_telegraph"] = {1, 3, 3, 0.4, 2, "pauseAtEnd"}
+    animations_init["attack_telegraph"] = {1, 3, 3, 0.2, 2, "pauseAtEnd"}
     animations_init["attack_process"] = {1, 2, 5, 0.2, 2, nil}
     animations_init["run"] = {1, 2, 7, 0.4, 2, nil}
 
@@ -169,21 +181,26 @@ end
 
 end--]]
 
--- AI Evaluation Functions -------------------------------------
+-- AI Evaluation Functions -------------------------------------------------------------------------------------
 
 function Enemy:isAlive_evalFunction()
     --print("Evaluating isAlive", self.userData.hp)
     return self.userData.hp ~= nil and self.userData.hp > 0
 end
 
+function Enemy:isStun_evalFunction()
+    --print("Evaluating isStun", self.userData.stun)
+    return self.userData.stun ~= nil and self.userData.stun == true
+end
+
 function Enemy:hasStamina_evalFunction()
-    print("Evaluating hasStamina", self.userData.stamina)
+    --print("Evaluating hasStamina", self.userData.stamina)
     return self.userData.stamina ~= nil and self.userData.stamina > 0
 end
 
 function Enemy:checkPlayer_evalFunction()
     local dist = getDistance(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
-    print("Evaluating checkPlayer", dist)
+    --print("Evaluating checkPlayer", dist)
     if dist > 100 then
         return 1
     else
@@ -197,10 +214,10 @@ function Enemy:checkPlayer_evalFunction()
     end
 end
 
--- AI Actions -------------------------------------
+-- AI Actions -------------------------------------------------------------------------------------------------------
 
 function Enemy:die_inizializeFunction()
-    print("Inizialize Die Action")
+    --print("Inizialize Die Action")
     self.body:setLinearVelocity(0, 0)
 end
 
@@ -214,12 +231,41 @@ function Enemy:die_updateFunction(dt)
 end
 
 function Enemy:die_cleanUpFunction()
-    print("CleanUp Die Action")
+    --print("CleanUp Die Action")
     self:destroyMe()
 end
 
+function Enemy:stun_inizializeFunction()
+    --print("Inizialize Stun Action")
+    self.stun_timer = 0
+    self.userData.stamina = self.userData.stamina - 1
+    self.body:setLinearDamping(10)
+    self.sprite:setColor(1,1,1,0.5)
+    self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
+
+    table.insert(SPAWNQUEUE, {group = "Particle", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2]), "damage enemy"}})
+    table.insert(SPAWNQUEUE, {group = "Particle", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4, "damage enemy"}})
+    table.insert(SPAWNQUEUE, {group = "Particle", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4, "damage enemy"}})
+end
+
+function Enemy:stun_updateFunction(dt)
+    self.stun_timer = self.stun_timer + dt
+    --print(self.stun_timer)
+    if self.stun_timer > 0.15 then
+        return "TERMINATED"
+    end    
+    return "RUNNING"
+end
+
+function Enemy:stun_cleanUpFunction()
+    --print("CleanUp Stun Action")
+    self.steering = {0, 0}
+    self.userData.stun = false
+    self.sprite:setColor(1,1,1,0)
+end
+
 function Enemy:idle_inizializeFunction()
-    print("Inizialize Idle Action")
+    --print("Inizialize Idle Action")
     --self.body:setLinearVelocity(0, 0)
     self.idle_timer = 0
     self:setAnimation("idle", self.anim_angle, self.anim_flip_x, 1)
@@ -237,7 +283,7 @@ function Enemy:idle_updateFunction(dt)
 end
 
 function Enemy:seek_inizializeFunction()
-    print("Inizialize Seek Action")
+    --print("Inizialize Seek Action")
     self.body:setLinearVelocity(0, 0)
     self.body:setLinearDamping(10)
 end
@@ -260,19 +306,19 @@ function Enemy:seek_updateFunction(dt)
 end
 
 function Enemy:seek_cleanUpFunction()
-    print("CleanUp Seek Action")
+    --print("CleanUp Seek Action")
     self.steering = {0, 0}
 end
 
 function Enemy:seekVel_inizializeFunction()
-    print("Inizialize SeekVel Action")
+    --print("Inizialize SeekVel Action")
     self.body:setLinearVelocity(0, 0)
 end
 
 function Enemy:seekVel_updateFunction(dt)
     local dif_x, dif_y = difVector(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
     self.angle = getAngle(dif_x,dif_y, 0,0)
-    self.speed = 30
+    self.speed = 40
     self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
 
     self:setAnimation("run", self.anim_angle, self.anim_flip_x, 1)
@@ -287,14 +333,14 @@ function Enemy:seekVel_updateFunction(dt)
 end
 
 function Enemy:seekVel_cleanUpFunction()
-    print("CleanUp Seek Action")
+    --print("CleanUp Seek Action")
     self.steering = {0, 0}
     self.speed = 0
     self.body:setLinearVelocity(0, 0)
 end
 
 function Enemy:wander_inizializeFunction()
-    print("Inizialize Wander Action")
+    --print("Inizialize Wander Action")
     local x, y = difVector(self.userData.position[1], self.userData.position[2], self.userData.spawn_position[1], self.userData.spawn_position[2])
     local lenght = getLenght(x, y)
     self.speed = 8
@@ -311,6 +357,7 @@ function Enemy:wander_updateFunction(dt)
     --print("Update Wander Action", self.wander_timer)
     self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
     self:setAnimation("run", self.anim_angle, self.anim_flip_x, 1)
+    self.sprite:setSpeed(0.5)
     if self.wander_timer > 3 then
         return "TERMINATED"
     end
@@ -318,51 +365,52 @@ function Enemy:wander_updateFunction(dt)
 end
 
 function Enemy:wander_cleanUpFunction()
-    print("CleanUp Wander Action")
+    --print("CleanUp Wander Action")
     self.speed = 0
     self.wander_timer = 0
 end
 
 function Enemy:chargeAttack_inizializeFunction()
-    print("Inizialize chargeAttack Action")
+    --print("Inizialize chargeAttack Action")
     self.chargeAttack_timer = 0
     self.speed = 0
+    self:goToFrameAnimation("attack_telegraph", 1)
 end
 
 function Enemy:chargeAttack_updateFunction(dt)
     self.chargeAttack_timer = self.chargeAttack_timer + dt
-    if self.chargeAttack_timer < 1.2 then
+    if self.chargeAttack_timer < 0.6 then
         -- Telegraph attack
         --print("Telegraph Attack")
-        self:setAnimation("attack_telegraph", self.anim_angle, self.anim_flip_x, 1)
+        self:setAnimation("attack_telegraph", 2, self.anim_flip_x, 1)
         self.angle = getAngle(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
     else
         -- Perform the attack
         --print("Perfom Attack")
-        self:setAnimation("attack_process", self.anim_angle, self.anim_flip_x, 1)
-        if self.chargeAttack_timer > 1.3 then
+        self:setAnimation("attack_process", 2, self.anim_flip_x, 1)
+        self.userData.enemy_damage = 10
+        if self.chargeAttack_timer > 0.7 then
             if self.chargeAttack_timer > 2.2 then
-                self.userData.stamina = self.userData.stamina - 3
+                self.userData.stamina = self.userData.stamina - 1
                 return "TERMINATED"
             end
         else
             self.body:setLinearDamping(2)
-            self.body:applyLinearImpulse(math.cos(self.angle) * 2, math.sin(self.angle) * 2)
+            self.body:applyLinearImpulse(math.cos(self.angle) * 2.4, math.sin(self.angle) * 2.4)
         end
     end
     return "RUNNING"
 end
 
 function Enemy:chargeAttack_cleanUpFunction()
-    print("CleanUp chargeAttack Action")
+    --print("CleanUp chargeAttack Action")
+    self.userData.damage = 0
 end
 
 function Enemy:update(dt)
 
     -- Behavior tree update
     self:updateUserData()
-
-    self.body:applyForce(unpack(self.steering))
 
     -- Apply gravity
     if self.dz > self.max_falling then
@@ -383,8 +431,8 @@ function Enemy:update(dt)
 
     self.x, self.y = self.body:getX(), self.body:getY()
 
-    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.height_flat/2 - self.z_offset)*(0.8125)
-    self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_offset
+    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.height_flat/2 - self.z_flat_offset)*(0.8125)
+    self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
 
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 
@@ -411,12 +459,22 @@ function Enemy:update(dt)
 
     self:getAnimationAngle()
 
-    self.sprite:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.2, self.z/SCALE3D.z - 0.6)
+    self.sprite:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y + self.y_sprite_offset, self.z/SCALE3D.z + self.z_sprite_offset)
     
 end
 
 function Enemy:updateUserData()
     self.userData.position = {self.x, self.y}
+end
+
+function Enemy:resetTree()
+    --print("reset tree")
+    self.tree.currentAction = nil
+    self.idle_timer = 0
+    self.wander_timer = 0
+    self.chargeAttack_timer = 0
+    self.die_timer = 0
+    self.stun_timer = 0
 end
 
 function Enemy:draw(shader, camera, shadow_map)
@@ -464,6 +522,13 @@ function Enemy:setAnimation(name, angle, flip_x, flip_y)
     local anim = self.animations[name]
     self.sprite:changeAnimation(anim[angle], flip_x, flip_y)
     self.last_angles_index = angle
+end
+
+function Enemy:goToFrameAnimation(name, frame)
+    local anim = self.animations[name]
+    for _, index in pairs(anim) do
+        self.sprite:goToFrame(index, frame)
+    end
 end
 
 function Enemy:getAnimationAngle()
@@ -517,16 +582,19 @@ function Enemy:exitHit(entity)
     --print("Enemy exited a collision")
 end
 
-function Enemy:hitboxGotHit(entity)
-    print("Enemy Hitbox got hit: ", entity.fixture:getCategory())
+function Enemy:hitboxIsHit(entity)
+    --print("Enemy Hitbox is hit: ", entity.fixture:getCategory())
     if entity.userData ~= nil then
-        if entity.userData.damage ~= nil then
-            self.userData.hp = self.userData.hp - entity.userData.damage
-            if self.userData.hp <= 0 then
-                self.tree.currentAction = nil
-            end
+        if entity.userData.player_damage ~= nil then
+            self.userData.hp = self.userData.hp - entity.userData.player_damage
+            self:resetTree()
+            self.userData.stun = true
+            self.steering = {normalizeVector(entity.body:getLinearVelocity())}
         end
     end
+end
+function Enemy:hitboxGotHit(entity)
+    --print("Enemy Hitbox got hit: ", entity.fixture:getCategory())
 end
 function Enemy:hitboxExitHit(entity)
     --print("Enemy Hitbox exited a collision")

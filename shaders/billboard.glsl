@@ -7,19 +7,22 @@ uniform mat4 viewMatrix;
 
 uniform bool isInstanced;
 varying vec2 instanceUVs;
+varying vec4 overlayColor;
 
 uniform vec2 flipVertex;
 
 #ifdef VERTEX
     uniform bool isCanvasEnabled;
     
+    varying mat4 actualModelMatrix;
+    
     varying vec4 worldPosition;
     varying vec4 viewPosition;
     varying vec4 screenPosition;
 
-    attribute vec3 InstancePosition;
-    attribute vec3 InstanceScale;
     attribute vec2 InstanceUVs;
+
+    attribute vec4 OverlayColor;
 
     attribute vec4 ModelMat1;
     attribute vec4 ModelMat2;
@@ -28,20 +31,19 @@ uniform vec2 flipVertex;
 
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
+        actualModelMatrix = modelMatrix;
         if (isInstanced == true)
         {
-            vertexPosition.xyz *= InstanceScale;
             vertexPosition.xy *= flipVertex;
+            actualModelMatrix = mat4(ModelMat1, ModelMat2, ModelMat3, ModelMat4);
         }
-        worldPosition = modelMatrix * vertexPosition;
-        if (isInstanced == true)
-        {
-            worldPosition.xyz += InstancePosition;
-        }
+        worldPosition = actualModelMatrix * vertexPosition;
         viewPosition = viewMatrix * worldPosition;
         screenPosition = projectionMatrix * viewPosition;
 
         instanceUVs = InstanceUVs;
+
+        overlayColor = OverlayColor;
 
         if (isCanvasEnabled) {
             screenPosition.y *= -1.0;
@@ -60,10 +62,14 @@ uniform vec2 flipVertex;
         if (isInstanced == true)
         {
             texcoord.xy += instanceUVs;
-            //texcoord.x = 1.0 - texcoord.x;
         }
         // maps the texture (tex) to the uvs (texcoord)
         vec4 texcolor = Texel(tex, texcoord);
+
+        if (isInstanced == true)
+        {
+            texcolor.rgb = mix(texcolor.rgb, overlayColor.rgb, overlayColor.a);
+        }
 
         if (texcolor.a == 0.0)
         {

@@ -52,6 +52,7 @@ g3d.newCamera = require(g3d.path .. "/camera_obj")
 g3d.collisions = require(g3d.path .. "/collisions")
 g3d.loadObj = require(g3d.path .. "/objloader")
 g3d.vectors = require(g3d.path .. "/vectors")
+g3d.newMatrix = require(g3d.path .. "/matrices")
 
 -- so that far polygons don't overlap near polygons
 love.graphics.setDepthMode("lequal", true)

@@ -11,7 +11,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
     self.x = x
     self.y = y
     self.z = z
-    
+
     self.angle = ini_angle
 
     self.depth = 10
@@ -20,18 +20,15 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
 
     -- Set projectile type
     if self.type == "simple player" then
-        self.uvs = {0/4, 0}
+        self.uvs = {0/10, 5/10}
         self.radius = 4
-        self.speed = 120
-        self.y = self.y
-        self.z = self.z
+        self.speed = 140
         self.z_offset = 3 + self.depth/2
         self.inactive_timer = 0
-        self.userData.damage = 2
+        self.userData.player_damage = 2
     end
 
     self.timer = 0
-    --self.max_timer = 16 - self.speed*(1/20) --120 speed = 10 seconds (MAX = 320)
     self.max_timer = 16 - 0.0002*self.speed*self.speed --120 speed = 13 (MAX = 280)
     
     self.top = self.z + self.depth/2
@@ -80,6 +77,13 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, projectil
     --print(entity_dx, entity_dy)
     self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
 
+    -- Instance mesh
+    self.matrix = g3d.newMatrix()
+    self.position = {x,y,z}
+    self.rotation = {0,0,0}
+    self.scale = {16/16, 0, (16/16)/math.cos(0.927295218)}
+    self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
+
     -- Shadow
     self.shadow = newShadow(self)
 
@@ -105,6 +109,12 @@ function Projectile:update(dt)
         self.active = false
     end
 
+    -- Instanced Mesh update
+    self.position = {self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z}
+    self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
+
+    projectile_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
+
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
     --self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
@@ -121,7 +131,7 @@ end
 
 function Projectile:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        self.shadow:draw(shader, camera, shadow_map)
+        --self.shadow:draw(shader, camera, shadow_map)
     else
         --self.model:draw(shader, camera, shadow_map)
     end
@@ -133,8 +143,9 @@ function Projectile:destroyMe(external_index)
     local swap_obj = projectiles[swap_index]
     projectiles[external_index] = swap_obj
     projectiles[external_index].index = external_index
-    projectiles[external_index].shadow.index = self.shadow.index
+    --projectiles[external_index].shadow.index = self.shadow.index
 
+    self.shadow:destroyMe()
     self.body:destroy()
 end
 
@@ -173,12 +184,15 @@ function Projectile:exitHit(entity, xn, yn)
     --print("Projectile exited a collision")
 end
 
-function Projectile:hitboxGotHit(entity)
+function Projectile:hitboxIsHit(entity)
     local category = entity.fixture:getCategory()
-    --print("Projectile Hitbox got hit: ", category)
+    --print("Projectile Hitbox ss hit: ", category)
     if self.hit_set[category] ~= nil then
         self.active = false
     end
+end
+function Projectile:hitboxGotHit(entity)
+    --print("Projectile Hitbox got hit: ", category)
 end
 function Projectile:hitboxExitHit(entity)
     --print("Projectile Hitbox exited a collision")

@@ -23,6 +23,7 @@ varying vec4 project; //shadow projected vertex
 
 uniform bool isInstanced;
 varying vec2 instanceUVs;
+varying vec4 overlayColor;
 
 #ifdef VERTEX
     uniform bool isCanvasEnabled;
@@ -43,6 +44,8 @@ varying vec2 instanceUVs;
     attribute vec3 InstanceScale;
     attribute vec2 InstanceUVs;
 
+    attribute vec4 OverlayColor;
+
     vec4 position(mat4 transformProjection, vec4 vertexPosition)
     {
         if (isInstanced == true)
@@ -61,6 +64,7 @@ varying vec2 instanceUVs;
         vertexColor = VertexColor;
 
         instanceUVs = InstanceUVs;
+        overlayColor = OverlayColor;
 
         //normal = VertexNormal;
         normal = vec4(trasposedInverseModelMatrix * vertexNormal).xyz;
@@ -139,6 +143,12 @@ varying vec2 instanceUVs;
 
         texcolor.rgb *= shadow_intensity;
         texcolor.rgb += light_intensity * light_color.a;
+
+        if (isInstanced == true)
+        {
+            texcolor.rgb = mix(texcolor.rgb, overlayColor.rgb, overlayColor.a);
+        }
+        
 
         return texcolor;
     }

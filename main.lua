@@ -17,6 +17,11 @@ function love.load()
     --2D animation library
     anim8 = require("libs/anim8")
 
+    -- Fonts and sounds
+    FONT_SMALL = love.graphics.newFont("assets/fonts/RobotoCondensed-Bold.ttf", 8*WINDOWSCALE)
+    FONT_SMALL:setFilter("linear")
+    love.graphics.setFont(FONT_SMALL)
+
     -- for name, i in pairs(love.graphics.getSupported()) do
     -- 	print(name, i)
     -- end
@@ -39,6 +44,9 @@ function love.load()
     --variance_shadow_canvas:setFilter("linear","linear")
 
     CAM_OFFSET = {0, 0}
+
+    SCREEN_SHAKING = 0
+    GAME_SPEED = 1
 
     DISTLIGHTCAM = 20
     DISTMAINCAM = 10
@@ -97,17 +105,14 @@ function love.load()
     --13 -> Unbreakable terrain (Floor 3)
     --14 -> Unbreakable terrain (Floor 4)
 
-
-    -- FLAT WORLD
-    --same as the original WORLD categories and mask
-
 	local newPlayer = require("objects/player")
 	local newCursor = require("objects/cursor")
-	local newEnemy_Slime = require("objects/enemy_Slime")
+	local newEnemy_Slime = require("objects/enemies/enemy_Slime")
 	local newBox = require("objects/box")
 	local newPolygon = require("objects/polygon")
 	local newCircle = require("objects/circle")
 	local newProjectile = require("objects/projectile")
+	local newParticle = require("objects/particle")
 
 	newInstancedMesh = require("objects/instanced_mesh")
 	newShadow = require("objects/shadow")
@@ -118,12 +123,13 @@ function love.load()
 	SPAWNFUNCTIONS = {}
 	SPAWNFUNCTIONS["Enemy_Slime"] = newEnemy_Slime
 	SPAWNFUNCTIONS["Projectile"] = newProjectile
+	SPAWNFUNCTIONS["Particle"] = newParticle
 	SPAWNFUNCTIONS["Box"] = newBox
 
 	SPAWNQUEUE = {}
 	DELETEQUEUE = {}
 
-	shadow_imesh = newInstancedMesh(200, g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", 16, 16)
+	--shadow_imesh = newInstancedMesh(200, g3d.loadObj("assets/3d/unit_disc_2.obj", false, true), "assets/3d/no_texture.png", 16, 16)
 
 	cursor_1 = newCursor()
 	love.mouse.setVisible(false)
@@ -135,11 +141,11 @@ function love.load()
 
 	enemies = {}
 	table.insert(enemies, newEnemy_Slime(120, 120, 100))
-	--table.insert(enemies, newEnemy_Slime(220, 160, 100))
+	table.insert(enemies, newEnemy_Slime(220, 160, 100))
 
 	circle_1 = newCircle(30, 30, 8, 20)
 
-	projectile_imesh = newInstancedMesh(600, "plane", "assets/2d/projectiles/test.png", 16, 16, {rotation = {-0.927295218,0,0}})
+	projectile_imesh = newInstancedMesh(600, "plane", "assets/2d/projectiles/small_16.png", 16, 16, {rotation = {-0.927295218,0,0}})
 	projectiles = {}
 
 	--Level loader
@@ -232,6 +238,9 @@ function love.load()
 end
 
 function love.update(dt)
+
+	dt = dt*GAME_SPEED
+
 	--General Inputs
 	if love.keyboard.isDown("r") then
 		love.event.quit("restart")
@@ -277,6 +286,20 @@ function love.update(dt)
 	-- Entities update
 	WORLD:update(dt)
 
+	local all_conts = WORLD:getContacts()
+	for _, cont in pairs(all_conts) do
+		if cont:isTouching() == true then
+			local a, b = cont:getFixtures()
+			local user_a, user_b = a:getUserData(), b:getUserData()
+			if a:getCategory() == 6 then
+				user_a:hitboxIsHit(user_b)
+			end
+			if b:getCategory() == 6 then
+				user_b:hitboxIsHit(user_a)
+			end
+		end
+	end
+
 	player_1:update(dt)
 	cursor_1:update(dt)
 	cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
@@ -290,8 +313,12 @@ function love.update(dt)
 	for i, spawn in pairs(SPAWNQUEUE) do
 		obj = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
 		if spawn["group"] == "Projectile" then
-			local instance_index = projectile_imesh:addInstance(obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, 1,1,1, obj.uvs[1], obj.uvs[2])
+			local instance_index = projectile_imesh:addInstance(obj.matrix, obj.uvs[1], obj.uvs[2])
 			--print("adding from SPAWNQUEUE: ", instance_index, obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
+			obj.index = instance_index
+			table.insert(projectiles, obj)
+		elseif spawn["group"] == "Particle" then
+			local instance_index = projectile_imesh:addInstance(obj.matrix, obj.uvs[1], obj.uvs[2])
 			obj.index = instance_index
 			table.insert(projectiles, obj)
 		end
@@ -302,11 +329,8 @@ function love.update(dt)
 		if projectile.body:isDestroyed() == false then
 			if projectile.active == true then
 				projectile:update(dt)
-				projectile_imesh:updateInstancePosition(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z)
-				--print(projectile.index, projectile.x/SCALE3D.x, projectile.y/SCALE3D.y, projectile.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
 			else
 				projectile:destroyMe(i)
-				projectile.shadow:destroyMe()
 			end
 		end
 	end
@@ -318,6 +342,8 @@ function love.update(dt)
 		elseif delete["group"] == "Enemy" then
 			print("remove from table")
 			table.remove(enemies, delete["index"])
+		elseif delete["group"] == "Particle" then
+			table.remove(projectiles, swap_index)
 		end
 	end
 
@@ -365,6 +391,13 @@ function love.update(dt)
 
 	--main_camera:followPoint(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 	CAM_OFFSET = main_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
+
+	if SCREEN_SHAKING > 0 then
+		local random_x = math.random(2*SCREEN_SHAKING)
+		local random_y = math.random(2*SCREEN_SHAKING)
+		CAM_OFFSET[1] = CAM_OFFSET[1] + random_x
+		CAM_OFFSET[2] = CAM_OFFSET[2] + random_y
+	end
 
 	light_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
 
@@ -502,7 +535,7 @@ function love.draw(dt)
 		    for _, fixture in pairs(body:getFixtures()) do
 		    	if true then
 			        local shape = fixture:getShape()
-
+			        love.graphics.setLineWidth(1)
 			        if shape:typeOf("CircleShape") then
 			            local cx, cy = body:getWorldPoints(shape:getPoint())
 			            love.graphics.circle("line", cx, cy, shape:getRadius())
@@ -524,15 +557,19 @@ function love.draw(dt)
 
 	love.graphics.setCanvas()
 	--print(unpack(CAM_OFFSET))
-	love.graphics.draw(main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, unpack(CAM_OFFSET))
+	
+	love.graphics.draw(main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, CAM_OFFSET[1], CAM_OFFSET[2])
 	
 	if view[view_index] == "hitbox_debug" then
 		love.graphics.draw(debug_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE*0.8125, CAM_OFFSET[1], CAM_OFFSET[2])
 	end
 
 	-- Draw UI elements (Window size Resolution)
-	love.graphics.setColor(0.9, 0.8, 0.9)
-	love.graphics.print("FPS: "..tostring(fps), 10, 10)
+	love.graphics.setColor(244/255, 248/255, 255/255)
+	love.graphics.print("FPS: "..tostring(fps), 4*WINDOWSCALE, 4*WINDOWSCALE)
+
+	player_1:screenDrawUI()
+
 	circle_1:screenDraw()
 	cursor_1:screenDraw()
 	
@@ -558,8 +595,8 @@ function love.mousepressed( x, y, button, istouch, presses )
 end
 
 function beginContact(a, b, contact)
-	user_a = a:getUserData()
-	user_b = b:getUserData()
+	local user_a = a:getUserData()
+	local user_b = b:getUserData()
 	if a:getCategory() == 6 then
 		user_a:hitboxGotHit(user_b)
 	else
@@ -574,8 +611,8 @@ function beginContact(a, b, contact)
 end
 
 function endContact(a, b, contact)
-	user_a = a:getUserData()
-	user_b = b:getUserData()
+	local user_a = a:getUserData()
+	local user_b = b:getUserData()
 	if a:getCategory() == 6 then
 		user_a:hitboxExitHit(user_b)
 	else

@@ -17,9 +17,10 @@ local function newPlayer(x, y, z, cursor)
     self.top = self.z + self.depth/2
     self.bottom = self.z - self.depth/2
 
-    self.z_offset = self.depth/2 - 2
+    self.z_flat_offset = self.depth/2
 
     self.angle = 0
+    self.speed = 0
 
     local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
     self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
@@ -47,8 +48,36 @@ local function newPlayer(x, y, z, cursor)
         position = {self.x, self.y},
         spawn_position = {x, y},
         stamina = 10,
-        hp = 100
+        hp = 100,
+        max_hp = 100,
+        control = true,
+        vulnerable = true
         }
+
+    self.invulnerable_timer = 0
+    self.die_timer = 0
+
+    self.tree = tree.newTree(self)
+
+    self.control_action = self.tree.createAction("control", self.control_inizializeFunction, self.control_updateFunction, self.control_cleanUpFunction, self)
+    self.not_control_action = self.tree.createAction("not_control", self.not_control_inizializeFunction, self.not_control_updateFunction, self.not_control_cleanUpFunction, self)
+    self.die_action = self.tree.createAction("die", self.die_inizializeFunction, self.die_updateFunction, self.die_cleanUpFunction, self)
+ 
+    self.isAlive_evaluator = self.tree.createEvaluator("isAlive", self.isAlive_evalFunction, self)
+    self.isControl_evaluator = self.tree.createEvaluator("isControl", self.isControl_evalFunction, self)
+
+    self.isAlive_branch = self.tree.createBranch("isAlive")
+    self.isControl_branch = self.tree.createBranch("isControl")
+
+    self.isAlive_branch:setEvaluator(self.isAlive_evaluator)
+    self.isAlive_branch:addChild(self.die_action, 1)
+    self.isAlive_branch:addChild(self.isControl_branch, 2)
+
+    self.isControl_branch:setEvaluator(self.isControl_evaluator)
+    self.isControl_branch:addChild(self.not_control_action, 1)
+    self.isControl_branch:addChild(self.control_action, 2)
+
+    self.tree:setBranch(self.isAlive_branch)
 
     --Physics
     self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
@@ -65,14 +94,14 @@ local function newPlayer(x, y, z, cursor)
     self.fixture:setCategory(2)
 
     -- Flat hitbox
-    self.width_flat, self.height_flat = 6, 16/0.8125
-    --self.flat_x, self.flat_y = self.body:getX(), (self.body:getY())*0.8125 - self.z_offset
-    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_offset - self.depth/2)*(0.8125)
+    self.width_flat, self.height_flat = 6, 10/0.8125
+    --self.flat_x, self.flat_y = self.body:getX(), (self.body:getY())*0.8125 - self.z_flat_offset
+    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_flat_offset - self.depth/2)*(0.8125)
 
     --self.shape_flat = love.physics.newCircleShape(self.radius)
-    --self.shape_flat:setPoint(0, -self.z_offset)
+    --self.shape_flat:setPoint(0, -self.z_flat_offset)
     local x, y = self.width_flat/2, self.height_flat/2 
-    self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_offset, x, -y -self.z_offset, -x, y -self.z_offset, x, y -self.z_offset)
+    self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_flat_offset, x, -y -self.z_flat_offset, -x, y -self.z_flat_offset, x, y -self.z_flat_offset)
     self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat)
 
     self.fixture_flat:setSensor(true)
@@ -87,6 +116,7 @@ local function newPlayer(x, y, z, cursor)
     local sheet = love.graphics.newImage("assets/2d/sprites/player/player.png")
     self.sprite_1 = newSprite(0,0,0, sheet, 40, 40)
     self.sprite_2 = newSprite(0,0,0, sheet, 40, 40)
+    self.z_sprite_offset = (20/16)*math.cos(0.927295218)
 
     self.anim_angle = 3
     self.anim_flip_x = 1
@@ -117,16 +147,6 @@ local function newPlayer(x, y, z, cursor)
         end
     end
 
-    -- for name, anim in pairs(self.animations) do
-    --     print(name)
-    --     for part, angle_index_pairs in pairs(anim) do
-    --         print(part)
-    --         for angle, index in pairs(angle_index_pairs) do
-    --             print(angle, index)
-    --         end
-    --     end
-    -- end
-
     self:setAnimation("idle", 3, 1, 1)
     self.last_angles_index = 3
 
@@ -139,9 +159,45 @@ local function newPlayer(x, y, z, cursor)
     return self
 end
 
-function Player:update(dt)
+-- Player Evaluation Functions -------------------------------------------------------------------------------------
 
-    local speed = 16*4
+function Player:isAlive_evalFunction()
+    --print("Evaluating isAlive", self.userData.hp)
+    return self.userData.hp ~= nil and self.userData.hp > 0
+end
+
+function Player:isControl_evalFunction()
+    --print("Evaluating isControl", self.userData.stun)
+    return self.userData.control ~= nil and self.userData.control == true
+end
+
+-- Player Actions -------------------------------------------------------------------------------------------------------
+
+function Player:die_inizializeFunction()
+    --print("Inizialize Die Action")
+    self.body:setLinearVelocity(0, 0)
+end
+
+function Player:die_updateFunction(dt)
+    self.die_timer = self.die_timer + dt
+    --print(self.die_timer)        
+    if self.die_timer > 20 then
+        return "TERMINATED"
+    end    
+    return "RUNNING"
+end
+
+function Player:die_cleanUpFunction()
+    --print("CleanUp Die Action")
+end
+
+function Player:control_inizializeFunction()
+    --print("Inizialize Control Action")
+end
+
+function Player:control_updateFunction(dt)
+
+    self.speed = 64
 
     -- Input handling
     -- Keyboard Input
@@ -162,16 +218,9 @@ function Player:update(dt)
     elseif love.keyboard.isDown("s") then
         self.angle = math.pi*0.50
     else
-        force = 0
-        speed = 0
+        self.speed = 0
         --when the key is released, the body stops instanly
         self.body:setLinearVelocity(0 , 0)
-        self:setAnimation("idle", self.last_angles_index, nil)
-    end
-
-    self:getAnimationAngle()
-    if speed > 0 then
-        self:setAnimation("run", self.anim_angle, self.anim_flip_x, 1)
     end
 
     -- Flying mode
@@ -183,16 +232,84 @@ function Player:update(dt)
     --     self:setHeight()
     -- end
 
+    -- Jump Input
+    if love.keyboard.isDown("space") then
+        self.space_is_down = 1
+    else
+        self.space_is_down = 0
+    end
+
+    -- Mouse Input
+    if self.cursor:click() then
+        --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+        --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
+        --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
+        -- dx, dy = 0, 0
+        -- if speed ~= 0 then
+        --     dx, dy = self.body:getLinearVelocity()
+        --     dx, dy = dx, dy
+        -- end
+        local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
+        --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
+        local spawn_point = {self.x + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.y - self.z_flat_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
+        table.insert(SPAWNQUEUE, {group = "Projectile", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, "simple player"}})
+    end
+
+    if self.userData.control == true then
+        return "RUNNING"
+    end    
+    return "TERMINATED"
+end
+
+function Player:control_cleanUpFunction()
+    --print("CleanUp Control Action")
+end
+
+function Player:not_control_inizializeFunction()
+    --print("Inizialize Not Control Action")
+end
+
+function Player:not_control_updateFunction(dt)
+    return "RUNNING"
+end
+
+function Player:not_control_cleanUpFunction()
+    --print("CleanUp Not Control Action")
+end
+
+function Player:update(dt)
+
     self:updateUserData()
 
-    self.body:setLinearVelocity(math.cos(self.angle) * speed, math.sin(self.angle) * speed)
+    self.tree:update(dt)
+
+    if self.userData.vulnerable == false then
+        self.invulnerable_timer = self.invulnerable_timer + dt
+        self.sprite_1:setColor(252/255, 55/255, 134/255, 0.25*(math.cos(self.invulnerable_timer*12)+1) )
+        self.sprite_2:setColor(252/255, 55/255, 134/255, 0.25*(math.cos(self.invulnerable_timer*12)+1))
+        if self.invulnerable_timer > 1.8 then
+            self.invulnerable_timer = 0
+            self.userData.vulnerable = true
+            self.sprite_1:setColor(1, 1, 1, 0)
+        self.sprite_2:setColor(1, 1, 1, 0)
+        end
+    end
+
+    self:getAnimationAngle()
+    if self.speed > 0 then
+        self:setAnimation("run", self.anim_angle, self.anim_flip_x, 1)
+    else
+        self:setAnimation("idle", self.last_angles_index, nil)
+    end
+
+    self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
 
     --self.x, self.y = self.body:getX(), self.body:getY()
 
     self.x, self.y = math.floor(self.body:getX()), math.floor(self.body:getY())
 
-    --self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_offset
-    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_offset - self.height_flat/2)*(0.8125)
+    --self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
+    --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_flat_offset - self.height_flat/2)*(0.8125)
 
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
@@ -225,12 +342,6 @@ function Player:update(dt)
         self.coyote_time_counter = 0
     end
 
-    if love.keyboard.isDown("space") then
-        self.space_is_down = 1
-    else
-        self.space_is_down = 0
-    end
-
     -- Apply gravity
     if not(self.on_ground) and self.dz > self.max_falling then
         self.dz = self.dz + self.z_gravity - self.space_up_factor*(1 - self.space_is_down)
@@ -249,35 +360,27 @@ function Player:update(dt)
         end
     end
 
-    -- Mouse Input
-    if self.cursor:click() then
-        --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-        --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
-        --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        -- dx, dy = 0, 0
-        -- if speed ~= 0 then
-        --     dx, dy = self.body:getLinearVelocity()
-        --     dx, dy = dx, dy
-        -- end
-        local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
-        --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        local spawn_point = {self.x + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.y - self.z_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, "simple player"}})
-    end
-
     -- Animation Handleling
     self.sprite_1:update(dt)
     self.sprite_2:update(dt)
 
-
     self:setHeight()
     self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.2, self.z/SCALE3D.z - 0.6)
-    self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.15, self.z/SCALE3D.z - 0.6)
+    self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.2, self.z/SCALE3D.z + self.z_sprite_offset)
+    self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.15, self.z/SCALE3D.z + self.z_sprite_offset)
+
 end
 
 function Player:updateUserData()
     self.userData.position = {self.x, self.y}
+end
+
+function Player:resetTree()
+    --print("reset tree")
+    self.tree.currentAction = nil
+    self.userData.control = true
+    self.userData.vulnerable = true
+    self.die_timer = 0
 end
 
 function Player:draw(shader, camera, shadow_map)
@@ -299,6 +402,20 @@ function Player:debugDraw()
     --print(current_camera.target[1], current_camera.target[2])
     love.graphics.circle("line", self.flat_x, self.flat_y, self.radius)
     --love.graphics.rectangle("line", self.flat_x, self.flat_y, self.width_flat, self.height_flat)
+end
+
+function Player:screenDrawUI()
+    local size = 1.5*self.userData.max_hp
+    love.graphics.setLineWidth(4*WINDOWSCALE)
+    love.graphics.setColor(244/255, 248/255, 255/255)
+    love.graphics.rectangle("line", 8*WINDOWSCALE, (SCREENHEIGHT-60)*WINDOWSCALE, (size)*WINDOWSCALE, 12*WINDOWSCALE)
+    love.graphics.setColor(47/255, 18/255, 25/255)
+    love.graphics.rectangle("fill", 8*WINDOWSCALE, (SCREENHEIGHT-60)*WINDOWSCALE, (size)*WINDOWSCALE, 12*WINDOWSCALE)
+    love.graphics.setColor(252/255, 55/255, 134/255)
+    local scale = self.userData.hp/self.userData.max_hp
+    love.graphics.rectangle("fill", 8*WINDOWSCALE, (SCREENHEIGHT-60)*WINDOWSCALE, (size*scale)*WINDOWSCALE, 12*WINDOWSCALE)
+    love.graphics.setColor(244/255, 248/255, 255/255)
+    love.graphics.print("HP: "..tostring(self.userData.hp).."/100", (8+54)*WINDOWSCALE, (SCREENHEIGHT-58)*WINDOWSCALE)
 end
 
 function Player:setPosition(x, y)
@@ -364,6 +481,20 @@ function Player:exitHit(entity)
     --print("Player exited a collision")
 end
 
+function Player:hitboxIsHit(entity)
+    --print("Player Hitbox is hit: ", entity.fixture:getCategory())
+    if entity.userData ~= nil then
+        if entity.userData.enemy_damage ~= nil then
+            if self.userData.vulnerable == true then
+                self.userData.hp = self.userData.hp - entity.userData.enemy_damage
+                self.userData.vulnerable = false
+                if self.userData.hp <= 0 then
+                    self:resetTree()
+                end
+            end
+        end
+    end
+end
 function Player:hitboxGotHit(entity)
     --print("Player Hitbox got hit: ", entity.fixture:getCategory())
 end

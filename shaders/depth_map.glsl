@@ -13,27 +13,28 @@ varying vec2 instanceUVs;
     uniform mat4 depthMVP;
     uniform bool isCanvasEnabled;
 
-    attribute vec3 InstancePosition;
-    attribute vec3 InstanceScale;
+    varying mat4 actualModelMatrix;
+
     attribute vec2 InstanceUVs;
+
+    attribute vec4 ModelMat1;
+    attribute vec4 ModelMat2;
+    attribute vec4 ModelMat3;
+    attribute vec4 ModelMat4;
 
     vec4 position( mat4 transform_projection, vec4 vertexPosition )
     {   
         vec4 screenPosition;
         //screenPosition = depthMVP * vertexPosition;
 
+        actualModelMatrix = modelMatrix;
         if (isInstanced == true)
         {
-            vertexPosition.xyz *= InstanceScale;
+            actualModelMatrix = mat4(ModelMat1, ModelMat2, ModelMat3, ModelMat4);
         }
-        worldPosition = modelMatrix * vertexPosition;
-        if (isInstanced == true)
-        {
-            worldPosition.xyz += InstancePosition;
-        }
+        worldPosition = actualModelMatrix * vertexPosition;
         viewPosition = viewMatrix * worldPosition;
-
-        screenPosition = projectionMatrix * viewMatrix * worldPosition;
+        screenPosition = projectionMatrix * viewPosition;
 
         if (isCanvasEnabled) {
             screenPosition.y *= -1.0;

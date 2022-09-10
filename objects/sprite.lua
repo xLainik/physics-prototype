@@ -17,12 +17,19 @@ local function newSprite(x,y,z, spritesheet_path, frame_width, frame_height, bor
     self.total_frames = self.sheet:getWidth()/self.frame_width
     self.total_angles = self.sheet:getHeight()/self.frame_height
 
-    local scale = {self.frame_width/16, 0, (self.frame_height/16)/math.cos(0.927295218)}
+    self.position = {0,0,0}
+    self.rotation = {0,0,0}
+    self.scale = {self.frame_width/16, 0, (self.frame_height/16)/math.cos(0.927295218)}
     
     self.z_offset = (self.frame_height/16)/2
 
-    self.imesh = newInstancedMesh(1, "plane", self.sheet, frame_width, frame_height, {scale = scale})
-    self.imesh:addInstance(x,y,z, 1,1,1, 0,0)
+    self.matrix = g3d.newMatrix()
+
+    self.imesh = newInstancedMesh(1, "plane", self.sheet, frame_width, frame_height)
+    self.imesh:addInstance(self.matrix, 0,0, 1,1,1,0)
+
+    self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
+    self.imesh:updateInstanceMAT(1, self.matrix:getMatrixRows())
 
     self.animations = {}
     self.uvs = {}
@@ -74,8 +81,32 @@ function Sprite:setSpeed(speed)
     self.speedMultiplier = speed
 end
 
+function Sprite:goToFrame(index, frame)
+    self.animations[index]:gotoFrame(frame)
+end
+
+function Sprite:updateMatrix()
+    self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
+    self.imesh:updateInstanceMAT(1, self.matrix:getMatrixRows())
+end
+
 function Sprite:setTranslation(x, y, z)
-    self.imesh:updateInstancePosition(1, x, y, z + self.z_offset)
+    self.position = {x, y, z}
+    self:updateMatrix()
+end
+
+function Sprite:setRotation(rx, ry, rz)
+    self.rotation = {rx, ry, rz}
+    self:updateMatrix()
+end
+
+function Sprite:setScale(sx, sy, sz)
+    self.scale = {sx, sy, sz}
+    self:updateMatrix()
+end
+
+function Sprite:setColor(r, g, b, a)
+    self.imesh:updateInstanceColor(1, r, g, b, a)
 end
 
 function Sprite:update(dt)
@@ -85,6 +116,8 @@ function Sprite:update(dt)
     --print(self.uvs[self.animations[self.current_anim].position][self.current_anim])
     self.imesh:updateInstanceUVs(1, u,v)
     --print(unpack(self.current_uvs))
+
+
 end
 
 function Sprite:draw(shader, camera, shadow_map)
