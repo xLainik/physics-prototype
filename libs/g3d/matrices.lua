@@ -219,13 +219,8 @@ end
 -- @tparam mat4 or {mat4, ...} left hand operand(s)
 -- @tparam mat4 right hand operand if a is not table
 -- @treturn mat4 out multiplied matrix result
-function multiplyMatrices(b, a, outmat)
-    local out
-    if outmat then
-        out = outmat
-    else
-        out = newMatrix()
-    end
+function multiplyMatrices(b, a)
+    local out = newMatrix()
 
     --mat4 out = mat4 b * mat4 a
     

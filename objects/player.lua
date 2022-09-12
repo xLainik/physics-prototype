@@ -224,13 +224,13 @@ function Player:control_updateFunction(dt)
     end
 
     -- Flying mode
-    -- if love.keyboard.isDown("space") then
-    --     self.z = self.z + 50*dt
-    --     self:setHeight()
-    -- elseif love.keyboard.isDown("lshift") then
-    --     self.z = self.z - 50*dt
-    --     self:setHeight()
-    -- end
+    if love.keyboard.isDown("space") then
+        self.z = self.z + 200*dt
+        self:setHeight()
+    elseif love.keyboard.isDown("lshift") then
+        self.z = self.z - 50*dt
+        self:setHeight()
+    end
 
     -- Jump Input
     if love.keyboard.isDown("space") then
@@ -252,7 +252,8 @@ function Player:control_updateFunction(dt)
         local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
         local spawn_point = {self.x + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.y - self.z_flat_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
-        table.insert(SPAWNQUEUE, {group = "Projectile", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, "simple player"}})
+        table.insert(SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, {player_damage = 2}} })
+        table.insert(SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.z, 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
     end
 
     if self.userData.control == true then
@@ -397,11 +398,13 @@ function Player:draw(shader, camera, shadow_map)
 end
 
 function Player:debugDraw()
-    --love.graphics.setColor(0.9, 0.8, 0.9)
-    love.graphics.setLineWidth(1)
+    local x, y = main_camera:pointOnScreen(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    local x2, y2 = x - self.width_flat/2*WINDOWSCALE, y - self.height_flat*WINDOWSCALE
+    love.graphics.setColor(0.9, 0.8, 0.9, 1)
+    love.graphics.setLineWidth(1*WINDOWSCALE)
     --print(current_camera.target[1], current_camera.target[2])
-    love.graphics.circle("line", self.flat_x, self.flat_y, self.radius)
-    --love.graphics.rectangle("line", self.flat_x, self.flat_y, self.width_flat, self.height_flat)
+    --love.graphics.circle("line", self.flat_x, self.flat_y, self.radius)
+    love.graphics.rectangle("line", x2, y2, self.width_flat*WINDOWSCALE, self.height_flat*WINDOWSCALE)
 end
 
 function Player:screenDrawUI()
@@ -484,7 +487,7 @@ end
 function Player:hitboxIsHit(entity)
     --print("Player Hitbox is hit: ", entity.fixture:getCategory())
     if entity.userData ~= nil then
-        if entity.userData.enemy_damage ~= nil then
+        if entity.userData.enemy_damage ~= nil and entity.userData.enemy_damage > 0 then
             if self.userData.vulnerable == true then
                 self.userData.hp = self.userData.hp - entity.userData.enemy_damage
                 self.userData.vulnerable = false

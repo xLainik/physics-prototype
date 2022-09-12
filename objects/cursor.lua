@@ -78,6 +78,7 @@ end
 
 
 function Cursor:screenDraw()
+	love.graphics.setColor(1,1,1)
 	love.graphics.draw(self.image, self.screen_x-3.5*WINDOWSCALE, self.screen_y-3.5*WINDOWSCALE, 0, WINDOWSCALE)
 	if self.state == "idle" then
 		--love.graphics.setColor(0.9, 0.8, 0.9)

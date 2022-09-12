@@ -1,8 +1,6 @@
 local Enemy = {}
 Enemy.__index = Enemy
 
-local machine = require('libs/state_machine')
-
 local function newEnemy(x, y, z)
     local self = setmetatable({}, Enemy)
 
@@ -53,6 +51,7 @@ local function newEnemy(x, y, z)
         spawn_position = {x, y},
         stamina = 0,
         hp = 10,
+        max_hp = 10,
         stun = false,
         enemy_damage = 0
         }
@@ -243,9 +242,9 @@ function Enemy:stun_inizializeFunction()
     self.sprite:setColor(1,1,1,0.5)
     self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
 
-    table.insert(SPAWNQUEUE, {group = "Particle", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2]), "damage enemy"}})
-    table.insert(SPAWNQUEUE, {group = "Particle", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4, "damage enemy"}})
-    table.insert(SPAWNQUEUE, {group = "Particle", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4, "damage enemy"}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
 end
 
 function Enemy:stun_updateFunction(dt)
@@ -404,7 +403,7 @@ end
 
 function Enemy:chargeAttack_cleanUpFunction()
     --print("CleanUp chargeAttack Action")
-    self.userData.damage = 0
+    self.userData.enemy_damage = 0
 end
 
 function Enemy:update(dt)
@@ -475,6 +474,8 @@ function Enemy:resetTree()
     self.chargeAttack_timer = 0
     self.die_timer = 0
     self.stun_timer = 0
+    -- Also reset no-loop animations
+    self:goToFrameAnimation("attack_telegraph", 1)
 end
 
 function Enemy:draw(shader, camera, shadow_map)
@@ -506,6 +507,22 @@ function Enemy:debugDraw()
         --love.graphics.circle("line", hit.x, hit.y, 3)
         --love.graphics.setColor(0, 255, 0)
         --love.graphics.line(hit.x, hit.y, hit.x + hit.xn * 25, hit.y + hit.yn * 25)
+    end
+end
+
+function Enemy:screenDrawUI()
+    local x, y = main_camera:pointOnScreen(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    local size = 1.2*self.userData.max_hp
+    local x2, y2 = x - size/2*WINDOWSCALE, y - (20)*WINDOWSCALE
+    love.graphics.setLineWidth(1*WINDOWSCALE)
+    love.graphics.setColor(244/255, 248/255, 255/255)
+    love.graphics.rectangle("line", x2, y2, (size)*WINDOWSCALE, 2*WINDOWSCALE)
+    love.graphics.setColor(47/255, 18/255, 25/255)
+    love.graphics.rectangle("fill", x2, y2, (size)*WINDOWSCALE, 2*WINDOWSCALE)
+    love.graphics.setColor(252/255, 55/255, 134/255)
+    if self.userData.hp > 0 then
+        local scale = self.userData.hp/self.userData.max_hp
+        love.graphics.rectangle("fill", x2, y2, (size*scale)*WINDOWSCALE, 2*WINDOWSCALE)
     end
 end
 
@@ -587,8 +604,11 @@ function Enemy:hitboxIsHit(entity)
     if entity.userData ~= nil then
         if entity.userData.player_damage ~= nil then
             self.userData.hp = self.userData.hp - entity.userData.player_damage
-            self:resetTree()
-            self.userData.stun = true
+            if self.tree.currentAction ~= nil and self.tree.currentAction.name ~= "chargeAttack" then
+                self:resetTree()
+                self.userData.stun = true
+            end
+            
             self.steering = {normalizeVector(entity.body:getLinearVelocity())}
         end
     end

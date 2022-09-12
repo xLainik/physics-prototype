@@ -114,7 +114,7 @@ function Sprite:update(dt)
     --local u, v = (self.animations[self.current_anim].position-1)/self.total_frames, (self.current_anim-1)/self.total_angles
     local u, v = unpack(self.uvs[self.current_anim][self.animations[self.current_anim].position])
     --print(self.uvs[self.animations[self.current_anim].position][self.current_anim])
-    self.imesh:updateInstanceUVs(1, u,v)
+    self.imesh:updateInstanceUVs(1, u,v,1)
     --print(unpack(self.current_uvs))
 
 

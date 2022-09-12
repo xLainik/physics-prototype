@@ -22,7 +22,7 @@ mat4 biasMatrix = mat4( // change projected depth values from -1 - 1 to 0 - 1
 varying vec4 project; //shadow projected vertex
 
 uniform bool isInstanced;
-varying vec2 instanceUVs;
+varying vec3 instanceUVs;
 varying vec4 overlayColor;
 
 #ifdef VERTEX
@@ -42,7 +42,7 @@ varying vec4 overlayColor;
     attribute vec3 VertexNormal;
     attribute vec3 InstancePosition;
     attribute vec3 InstanceScale;
-    attribute vec2 InstanceUVs;
+    attribute vec3 InstanceUVs;
 
     attribute vec4 OverlayColor;
 
@@ -94,7 +94,8 @@ varying vec4 overlayColor;
     {   
         if (isInstanced == true)
         {
-            texcoord.xy += instanceUVs;
+            texcoord.xy *= instanceUVs.z;
+            texcoord.xy += instanceUVs.xy;
         }
         // maps the texture (tex) to the uvs (texcoord)
         vec4 texcolor = Texel(tex, texcoord);

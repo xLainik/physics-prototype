@@ -212,4 +212,37 @@ function camera:followPoint(x, y)
     self:moveCamera(dx, dy, 0)
 end
 
+function camera:pointOnScreen2(x,y,z)
+    --local worldSpace = {self.target[1],0,0,0, self.target[2],0,0,0, self.target[3],0,0,0,0, 0,0,0,0}
+
+    local point = newMatrix()
+
+    point[1],  point[2],  point[3],  point[4]  = x, 0, 0, 0
+    point[5],  point[6],  point[7],  point[8]  = y, 0, 0, 0
+    point[9],  point[10], point[11], point[12] = z, 0, 0, 0
+    point[13], point[14], point[15], point[16] = 1, 0, 0, 0
+
+    --print("worldSpace")
+    --print(tostring(worldSpace))
+
+    --print("viewMatrix")
+    --print(tostring(self.viewMatrix))
+    --print("projectionMatrix")
+    --print(tostring(self.projectionMatrix))
+    local viewSpace = multiplyMatrices(self.viewMatrix, point)
+    --print("viewSpace")
+    --print(tostring(viewSpace))
+    local clipSpace = multiplyMatrices(self.projectionMatrix, viewSpace)
+    --print("clipSpace")
+    --print(tostring(clipSpace))
+    local x, y = clipSpace[1], clipSpace[5]
+    return x, -y
+end
+
+function camera:pointOnScreen(x,y,z)
+    local dif_x, dif_y, dif_z = x-self.target[1], y-self.target[2], z-self.target[3]
+    
+    return (((dif_x)*16 + 0.5*SCREENWIDTH) - CAM_OFFSET[1])*WINDOWSCALE - 16, ((dif_y)*-13 + (dif_z)*-9  + 0.5*SCREENHEIGHT - CAM_OFFSET[2])*WINDOWSCALE - 16
+end
+
 return newCamera

@@ -111,8 +111,9 @@ function love.load()
 	local newBox = require("objects/box")
 	local newPolygon = require("objects/polygon")
 	local newCircle = require("objects/circle")
-	local newProjectile = require("objects/projectile")
-	local newParticle = require("objects/particle")
+	local newProjectile_Simple = require("objects/projectiles/projectile_simple")
+	local newParticle_Damage = require("objects/particles/particle_damage")
+	local newParticle_Circle = require("objects/particles/particle_circle")
 
 	newInstancedMesh = require("objects/instanced_mesh")
 	newShadow = require("objects/shadow")
@@ -122,8 +123,9 @@ function love.load()
 
 	SPAWNFUNCTIONS = {}
 	SPAWNFUNCTIONS["Enemy_Slime"] = newEnemy_Slime
-	SPAWNFUNCTIONS["Projectile"] = newProjectile
-	SPAWNFUNCTIONS["Particle"] = newParticle
+	SPAWNFUNCTIONS["Projectile_Simple"] = newProjectile_Simple
+	SPAWNFUNCTIONS["Particle_Damage"] = newParticle_Damage
+	SPAWNFUNCTIONS["Particle_Circle"] = newParticle_Circle
 	SPAWNFUNCTIONS["Box"] = newBox
 
 	SPAWNQUEUE = {}
@@ -145,8 +147,17 @@ function love.load()
 
 	circle_1 = newCircle(30, 30, 8, 20)
 
-	projectile_imesh = newInstancedMesh(600, "plane", "assets/2d/projectiles/small_16.png", 16, 16, {rotation = {-0.927295218,0,0}})
+	projectile_imesh = newInstancedMesh(600, "plane", "assets/2d/projectiles/projectiles.png", 16, 16)
 	projectiles = {}
+	for index = 1, projectile_imesh.max_instances, 1 do
+        projectiles[index] = "empty"
+    end
+
+    particle_imesh = newInstancedMesh(400, "plane", "assets/2d/particles/particles.png", 16, 16)
+	particles = {}
+	for index = 1, particle_imesh.max_instances, 1 do
+        particles[index] = "empty"
+    end
 
 	--Level loader
 	collisions = {}
@@ -312,38 +323,31 @@ function love.update(dt)
 	--Spawn the stuff from SPAWNQUEUE
 	for i, spawn in pairs(SPAWNQUEUE) do
 		obj = SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
-		if spawn["group"] == "Projectile" then
-			local instance_index = projectile_imesh:addInstance(obj.matrix, obj.uvs[1], obj.uvs[2])
-			--print("adding from SPAWNQUEUE: ", instance_index, obj.x/SCALE3D.x, obj.y/SCALE3D.y, obj.z/SCALE3D.z, player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
-			obj.index = instance_index
-			table.insert(projectiles, obj)
-		elseif spawn["group"] == "Particle" then
-			local instance_index = projectile_imesh:addInstance(obj.matrix, obj.uvs[1], obj.uvs[2])
-			obj.index = instance_index
-			table.insert(projectiles, obj)
+		local words = {}
+		for w in string.gmatch(spawn["group"], "([^_]+)") do
+			table.insert(words, w)
 		end
+		local obj_type = words[1]
 	end
 
 	-- Projectiles update
-	for i, projectile in ipairs(projectiles) do
-		if projectile.body:isDestroyed() == false then
-			if projectile.active == true then
-				projectile:update(dt)
-			else
-				projectile:destroyMe(i)
-			end
-		end
+	for i = 1, projectile_imesh.instanced_count, 1 do
+		projectiles[i]:update(dt)
+	end
+
+	-- Particles update
+	for i = 1, particle_imesh.instanced_count, 1 do
+		particles[i]:update(dt)
 	end
 
 	--Delete the stuff from DELETEQUEUE
 	for i, delete in pairs(DELETEQUEUE) do
 		if delete["group"] == "Projectile" then
-			table.remove(projectiles, swap_index)
+			projectiles[delete["index"]] = "empty"
 		elseif delete["group"] == "Enemy" then
-			print("remove from table")
 			table.remove(enemies, delete["index"])
 		elseif delete["group"] == "Particle" then
-			table.remove(projectiles, swap_index)
+			particles[delete["index"]] = "empty"
 		end
 	end
 
@@ -497,6 +501,9 @@ function love.draw(dt)
 
 	projectile_imesh:draw(billboardShader, current_camera, false)
 
+	particle_imesh:draw(billboardShader, current_camera, false)
+	--particle_L_imesh:draw(billboardShader, current_camera, false)
+
 	--shadow_imesh:draw(billboardShader, current_camera, false)
 
     player_1:draw(billboardShader, current_camera, false)
@@ -568,7 +575,13 @@ function love.draw(dt)
 	love.graphics.setColor(244/255, 248/255, 255/255)
 	love.graphics.print("FPS: "..tostring(fps), 4*WINDOWSCALE, 4*WINDOWSCALE)
 
+	--player_1:debugDraw()
+
 	player_1:screenDrawUI()
+
+	for _, enemy in pairs(enemies) do
+		enemy:screenDrawUI()
+	end
 
 	circle_1:screenDraw()
 	cursor_1:screenDraw()

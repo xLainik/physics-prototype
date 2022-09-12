@@ -6,7 +6,7 @@ uniform mat4 modelMatrix;
 uniform mat4 viewMatrix;
 
 uniform bool isInstanced;
-varying vec2 instanceUVs;
+varying vec3 instanceUVs;
 varying vec4 overlayColor;
 
 uniform vec2 flipVertex;
@@ -20,7 +20,7 @@ uniform vec2 flipVertex;
     varying vec4 viewPosition;
     varying vec4 screenPosition;
 
-    attribute vec2 InstanceUVs;
+    attribute vec3 InstanceUVs;
 
     attribute vec4 OverlayColor;
 
@@ -61,7 +61,8 @@ uniform vec2 flipVertex;
 
         if (isInstanced == true)
         {
-            texcoord.xy += instanceUVs;
+            texcoord.xy *= instanceUVs.z;
+            texcoord.xy += instanceUVs.xy;
         }
         // maps the texture (tex) to the uvs (texcoord)
         vec4 texcolor = Texel(tex, texcoord);
