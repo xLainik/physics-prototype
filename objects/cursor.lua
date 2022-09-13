@@ -8,9 +8,9 @@ local function newCursor(x, y)
 	self.y = y or 0
 	self.z = z or 0
 
-	self.image = love.graphics.newImage("assets/2d/cursor.png")
+	self.image = love.graphics.newImage(GAME.sprites_directory.."/cursor.png")
 
-	self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0})
+	self.model = g3d.newModel(GAME.models_directory.."/unit_cylinder.obj", GAME.models_directory.."/no_texture.png", {0,0,0}, {0,0,0})
 
 	self.screen_x, self.screen_y = 0, 0
 
@@ -65,8 +65,8 @@ end
 function Cursor:updateCoords(cam_target_x, cam_target_y, player_z)
 	self.screen_x, self.screen_y = love.mouse.getPosition()
 	self.screen_x, self.screen_y = self.screen_x, self.screen_y
-	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-(SCREENWIDTH-16)/2)/SCREENSCALE + CAM_OFFSET[1]/16
-	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-(SCREENHEIGHT-16)/2)/(-SCREENSCALE)*(16/13) - 1 + CAM_OFFSET[2]/-16
+	self.x = cam_target_x + (self.screen_x/WINDOWSCALE-(SCREENWIDTH-16)/2)/SCALE3D.x + CAM_OFFSET[1]/16
+	self.y = cam_target_y + (self.screen_y/WINDOWSCALE-(SCREENHEIGHT-16)/2)/(-SCALE3D.x)*(16/13) - 1 + CAM_OFFSET[2]/-16
 	self.z = player_z/SCALE3D.z
 
 	self.model:setTranslation(self.x, self.y, self.z)

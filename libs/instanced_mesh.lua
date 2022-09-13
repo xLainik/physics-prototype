@@ -148,6 +148,7 @@ end
 
 -- Removes a single instance
 function InstancedMesh:removeInstance(index)
+
     self.instanced_count = self.instanced_count - 1
 
     -- Get last object in the pool

@@ -1,11 +1,8 @@
 -- Love2D v11.4
 
 function love.load()
-	-- Import libraries
+	-- Import utility library
 	require("libs/utils")
-	tree = require("objects/decision_tree")
-    g3d = require("libs/g3d")
-    anim8 = require("libs/anim8")
 
     -- for name, i in pairs(love.graphics.getSupported()) do
     -- 	print(name, i)
@@ -20,11 +17,11 @@ function love.load()
     FONT_LARGE = love.graphics.newFont("assets/fonts/RobotoCondensed-Bold.ttf", 16*WINDOWSCALE)
     FONT_LARGE:setFilter("linear")
 
-    local newGame = require("game")
+    local Game = require("game")
     GameWorldState = require("states/game_world")
     MainMenuState = require("states/main_menu")
 
-    GAME = newGame()
+    GAME = Game:new()
 
     game_world_state = GameWorldState:new()
     GAME:enterState(game_world_state)

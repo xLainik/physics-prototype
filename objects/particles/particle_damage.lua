@@ -27,7 +27,7 @@ local function newParticle(x, y, z, entity_dx, entity_dy, ini_angle)
     self.active = true
 
     --Physics
-    self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
     self.body:setFixedRotation(true)
     self.body:setMass(1)
 
@@ -43,9 +43,9 @@ local function newParticle(x, y, z, entity_dx, entity_dy, ini_angle)
     self.scale = {16/16, 0, (16/16)}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    local instance_index = particle_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
+    local instance_index = current_scene.particle_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
     self.index = instance_index
-    particles[instance_index] = self
+    current_scene.particles[instance_index] = self
 
     -- Drawing offsets
     self.y_sprite_offset = -0.3
@@ -79,7 +79,7 @@ function Particle:update(dt)
     self.position = {self.x/SCALE3D.x, self.y/SCALE3D.y + self.y_sprite_offset, self.z/SCALE3D.z + self.z_sprite_offset}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    particle_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
+    current_scene.particle_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
 
     if self.active == false then
         self:destroyMe()
@@ -104,12 +104,12 @@ function Particle:draw(shader, camera, shadow_map)
 end
 
 function Particle:destroyMe()
-    local last_index = particle_imesh:removeInstance(self.index)
-    local last_obj = particles[last_index]
-    particles[self.index] = last_obj
+    local last_index = current_scene.particle_imesh:removeInstance(self.index)
+    local last_obj = current_scene.particles[last_index]
+    current_scene.particles[self.index] = last_obj
     last_obj.index = self.index
 
-    table.insert(DELETEQUEUE, {group = "Particle", index = last_index})
+    table.insert(current_map.DELETEQUEUE, {group = "Particle", index = last_index})
 
     self.body:destroy()
 end

@@ -1,11 +1,13 @@
 local Game = {}
 Game.__index = Game
 
-local function newGame()
+function Game:new()
     local self = setmetatable({}, Game)
 
     self.state_stack = {}
     self.current_state = nil
+
+    self:setup_directories()
 
     self.options = {}
     self.options["up"] = "w"
@@ -61,4 +63,20 @@ function Game:exitState()
     end
 end
 
-return newGame
+function Game:setup_directories()
+    self.game_directory = love.filesystem.getSource()
+
+    self.assets_directory = "assets"
+    self.libs_directory = "libs"
+    self.maps_directory = "maps"
+    self.objects_directory = "objects"
+    self.states_directory = "states"
+
+    self.audio_directory = self.assets_directory .. "/audio"
+    self.fonts_directory = self.assets_directory .. "/fonts"
+    self.models_directory = self.assets_directory .. "/models"
+    self.shaders_directory = self.assets_directory .. "/shaders"
+    self.sprites_directory = self.assets_directory .. "/sprites"
+end
+
+return Game

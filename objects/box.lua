@@ -16,7 +16,7 @@ local function newBox(x, y, z, width, height, depth, model, coll_category)
     self.bottom = (self.z - self.depth/2)*SCALE3D.z
 
     --Physics
-    self.body = love.physics.newBody(WORLD, self.x*SCALE3D.x, self.y*SCALE3D.y, "static")
+    self.body = love.physics.newBody(current_map.WORLD, self.x*SCALE3D.x, self.y*SCALE3D.y, "static")
     self.shape = love.physics.newRectangleShape(self.width*SCALE3D.x, self.height*SCALE3D.x)
     self.fixture = love.physics.newFixture(self.body, self.shape)
 

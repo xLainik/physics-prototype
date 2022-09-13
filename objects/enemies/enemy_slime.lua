@@ -31,7 +31,7 @@ local function newEnemy(x, y, z)
     self.z_flat_offset = 8
 
     local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
-    self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
+    self.model = g3d.newModel(GAME.models_directory.."/unit_cylinder.obj", GAME.models_directory.."/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     -- -- State machine
     -- self.state_machine = machine.create({
@@ -102,7 +102,7 @@ local function newEnemy(x, y, z)
     self.tree:setBranch(self.isAlive_branch)
 
     --Physics
-    self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
     self.body:setFixedRotation(true)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
@@ -130,7 +130,7 @@ local function newEnemy(x, y, z)
     self:setHeight()
 
     -- Animations
-    local sheet = love.graphics.newImage("assets/2d/sprites/enemy_slime/slime.png")
+    local sheet = love.graphics.newImage(GAME.sprites_directory.."/sprites/enemy_slime/slime.png")
     self.sprite = newSprite(0,0,0, sheet, 24, 24)
     self.y_sprite_offset = -0.3
     self.z_sprite_offset = (12/16)*math.cos(0.927295218)
@@ -144,6 +144,7 @@ local function newEnemy(x, y, z)
     animations_init["attack_telegraph"] = {1, 3, 3, 0.2, 2, "pauseAtEnd"}
     animations_init["attack_process"] = {1, 2, 5, 0.2, 2, nil}
     animations_init["run"] = {1, 2, 7, 0.4, 2, nil}
+    animations_init["die"] = {1, 1, 9, 0.2, 2, "pauseAtEnd"}
 
     self.animations = {}
     for anim_name, anim in pairs(animations_init) do
@@ -217,13 +218,15 @@ end
 
 function Enemy:die_inizializeFunction()
     --print("Inizialize Die Action")
-    self.body:setLinearVelocity(0, 0)
+    self.body:setLinearDamping(2)
+    self:setAnimation("die", self.anim_angle, self.anim_flip_x, 1)
+    self.userData.enemy_damage = 0
 end
 
 function Enemy:die_updateFunction(dt)
     self.die_timer = self.die_timer + dt
     --print(self.die_timer)        
-    if self.die_timer > 0.2 then
+    if self.die_timer > 1 then
         return "TERMINATED"
     end    
     return "RUNNING"
@@ -464,6 +467,7 @@ function Enemy:update(dt)
 
     if self.userData.hp <= 0 then
         self.sprite:setColor(0,0,0,0.5)
+        self:resetTree()
     end
     -- Animation Handleling
     self.sprite:update(dt)
@@ -537,7 +541,7 @@ function Enemy:screenDrawUI()
 end
 
 function Enemy:destroyMe()
-    table.insert(DELETEQUEUE, {group = "Enemy", index = getIndex(enemies, self)})
+    table.insert(current_map.DELETEQUEUE, {group = "Enemy", index = getIndex(current_scene.enemies, self)})
     self.body:destroy()
 end
 
@@ -620,9 +624,9 @@ function Enemy:takeDamage(amount)
         self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
     end
 
-    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
-    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
-    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
+    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
+    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
+    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
 end
 
 function Enemy:hitboxIsHit(entity)
@@ -632,8 +636,6 @@ function Enemy:hitboxIsHit(entity)
             self.steering = {normalizeVector(entity.body:getLinearVelocity())}
             if self.userData.hp > 0 and self.userData.stun == false then
                 self:takeDamage(entity.userData.player_damage)
-            else
-                self:resetTree()
             end
         end
     end

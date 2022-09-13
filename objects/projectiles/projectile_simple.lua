@@ -41,7 +41,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     --self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     --Physics
-    self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
     self.body:setFixedRotation(true)
     self.body:setBullet(true) --slow processing
     self.shape = love.physics.newCircleShape(self.radius)
@@ -85,9 +85,9 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.scale = {16/16, 0, (16/16)/math.cos(0.927295218)}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    local instance_index = projectile_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
+    local instance_index = current_scene.projectile_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
     self.index = instance_index
-    projectiles[instance_index] = self
+    current_scene.projectiles[instance_index] = self
 
     -- Shadow
     self.shadow = newShadow(self)
@@ -118,7 +118,7 @@ function Projectile:update(dt)
     self.position = {self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    projectile_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
+    current_scene.projectile_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
 
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
@@ -147,15 +147,13 @@ function Projectile:draw(shader, camera, shadow_map)
 end
 
 function Projectile:destroyMe()
-    local last_index = projectile_imesh:removeInstance(self.index)
-    local last_obj = projectiles[last_index]
-    projectiles[self.index] = last_obj
+    local last_index = current_scene.projectile_imesh:removeInstance(self.index)
+    local last_obj = current_scene.projectiles[last_index]
+    current_scene.projectiles[self.index] = last_obj
     last_obj.index = self.index
-    --projectiles[self.index].shadow.index = self.shadow.index
 
-    table.insert(DELETEQUEUE, {group = "Projectile", index = last_index})
+    table.insert(current_map.DELETEQUEUE, {group = "Projectile", index = last_index})
 
-    self.shadow:destroyMe()
     self.body:destroy()
 end
 

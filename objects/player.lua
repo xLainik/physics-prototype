@@ -23,7 +23,7 @@ local function newPlayer(x, y, z, cursor)
     self.speed = 0
 
     local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
-    self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
+    self.model = g3d.newModel(GAME.models_directory.."/unit_cylinder.obj", GAME.models_directory.."/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     -- Variables for jumping
     self.top_floor = 1000
@@ -80,7 +80,7 @@ local function newPlayer(x, y, z, cursor)
     self.tree:setBranch(self.isAlive_branch)
 
     --Physics
-    self.body = love.physics.newBody(WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
     self.body:setFixedRotation(true)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
@@ -113,7 +113,7 @@ local function newPlayer(x, y, z, cursor)
     self:setHeight()
 
     -- Animations
-    local sheet = love.graphics.newImage("assets/2d/sprites/player/player.png")
+    local sheet = love.graphics.newImage(GAME.sprites_directory.."/sprites/player/player.png")
     self.sprite_1 = newSprite(0,0,0, sheet, 40, 40)
     self.sprite_2 = newSprite(0,0,0, sheet, 40, 40)
     self.z_sprite_offset = (20/16)*math.cos(0.927295218)
@@ -252,8 +252,8 @@ function Player:control_updateFunction(dt)
         local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
         --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
         local spawn_point = {self.x + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.y - self.z_flat_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
-        table.insert(SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, {player_damage = 2}} })
-        table.insert(SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.z, 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
+        table.insert(current_map.SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, {player_damage = 2}} })
+        table.insert(current_map.SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.z, 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
     end
 
     if self.userData.control == true then
