@@ -84,7 +84,7 @@ local function newEnemy(x, y, z)
 
     self.isAlive_branch:setEvaluator(self.isAlive_evaluator)
     self.isAlive_branch:addChild(self.die_action, 1)
-    self.isAlive_branch:addChild(self.isStun_branch, 2)
+    self.isAlive_branch:addChild(self.hasStamina_branch, 2)
 
     self.isStun_branch:setEvaluator(self.isStun_evaluator)
     self.isStun_branch:addChild(self.hasStamina_branch, 1)
@@ -239,7 +239,6 @@ function Enemy:stun_inizializeFunction()
     self.stun_timer = 0
     self.userData.stamina = self.userData.stamina - 1
     self.body:setLinearDamping(10)
-    self.sprite:setColor(1,1,1,0.5)
     self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
 
     table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
@@ -260,7 +259,6 @@ function Enemy:stun_cleanUpFunction()
     --print("CleanUp Stun Action")
     self.steering = {0, 0}
     self.userData.stun = false
-    self.sprite:setColor(1,1,1,0)
 end
 
 function Enemy:idle_inizializeFunction()
@@ -453,6 +451,20 @@ function Enemy:update(dt)
 
     self.tree:update(dt)
 
+    if self.userData.stun == true then
+        self.stun_timer = self.stun_timer + dt
+        self.sprite:setColor(1,1,1,0.5)
+        if self.stun_timer > 0.2 then
+            self.userData.stun = false
+            self.stun_timer = 0
+        end
+    else
+        self.sprite:setColor(1,1,1,0)
+    end
+
+    if self.userData.hp <= 0 then
+        self.sprite:setColor(0,0,0,0.5)
+    end
     -- Animation Handleling
     self.sprite:update(dt)
 
@@ -468,12 +480,10 @@ end
 
 function Enemy:resetTree()
     --print("reset tree")
-    self.tree.currentAction = nil
-    self.idle_timer = 0
-    self.wander_timer = 0
-    self.chargeAttack_timer = 0
-    self.die_timer = 0
-    self.stun_timer = 0
+    if self.tree.currentAction ~= nil then
+        self.tree.currentAction.status = "TERMINATED"
+        self.tree.currentAction = nil
+    end
     -- Also reset no-loop animations
     self:goToFrameAnimation("attack_telegraph", 1)
 end
@@ -599,17 +609,32 @@ function Enemy:exitHit(entity)
     --print("Enemy exited a collision")
 end
 
+function Enemy:takeDamage(amount)
+
+    self.userData.hp = self.userData.hp - amount
+
+    self.userData.stun = true
+
+    if self.tree.currentAction ~= nil and self.tree.currentAction.name ~= "chargeAttack" then
+        self.body:setLinearDamping(10)
+        self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
+    end
+
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
+end
+
 function Enemy:hitboxIsHit(entity)
     --print("Enemy Hitbox is hit: ", entity.fixture:getCategory())
     if entity.userData ~= nil then
-        if entity.userData.player_damage ~= nil then
-            self.userData.hp = self.userData.hp - entity.userData.player_damage
-            if self.tree.currentAction ~= nil and self.tree.currentAction.name ~= "chargeAttack" then
-                self:resetTree()
-                self.userData.stun = true
-            end
-            
+        if entity.userData.player_damage ~= nil and entity.userData.player_damage > 0 then
             self.steering = {normalizeVector(entity.body:getLinearVelocity())}
+            if self.userData.hp > 0 and self.userData.stun == false then
+                self:takeDamage(entity.userData.player_damage)
+            else
+                self:resetTree()
+            end
         end
     end
 end

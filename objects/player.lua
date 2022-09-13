@@ -201,21 +201,21 @@ function Player:control_updateFunction(dt)
 
     -- Input handling
     -- Keyboard Input
-    if love.keyboard.isDown("a") and love.keyboard.isDown("w") then
+    if GAME.actions["left"] and GAME.actions["up"] then
         self.angle = math.pi*1.25
-    elseif love.keyboard.isDown("d") and love.keyboard.isDown("w")then
+    elseif GAME.actions["right"] and GAME.actions["up"]then
         self.angle = math.pi*1.75
-    elseif love.keyboard.isDown("a") and love.keyboard.isDown("s") then
+    elseif love.keyboard.isDown("a") and GAME.actions["down"] then
         self.angle = math.pi*0.75
-    elseif love.keyboard.isDown("d") and love.keyboard.isDown("s") then
+    elseif GAME.actions["right"] and GAME.actions["down"] then
         self.angle = math.pi*0.25
-    elseif love.keyboard.isDown("d") then
+    elseif GAME.actions["right"] then
         self.angle = 0
-    elseif love.keyboard.isDown("a") then
+    elseif GAME.actions["left"] then
         self.angle = math.pi
-    elseif love.keyboard.isDown("w") then
+    elseif GAME.actions["up"] then
         self.angle = math.pi*1.50
-    elseif love.keyboard.isDown("s") then
+    elseif GAME.actions["down"] then
         self.angle = math.pi*0.50
     else
         self.speed = 0
@@ -223,17 +223,17 @@ function Player:control_updateFunction(dt)
         self.body:setLinearVelocity(0 , 0)
     end
 
-    -- Flying mode
-    if love.keyboard.isDown("space") then
-        self.z = self.z + 200*dt
-        self:setHeight()
-    elseif love.keyboard.isDown("lshift") then
-        self.z = self.z - 50*dt
-        self:setHeight()
-    end
+    -- -- Flying mode
+    -- if GAME.actions["action_1"] then
+    --     self.z = self.z + 200*dt
+    --     self:setHeight()
+    -- elseif GAME.actions["shift"] then
+    --     self.z = self.z - 50*dt
+    --     self:setHeight()
+    -- end
 
     -- Jump Input
-    if love.keyboard.isDown("space") then
+    if GAME.actions["action_1"] then
         self.space_is_down = 1
     else
         self.space_is_down = 0
