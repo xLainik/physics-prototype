@@ -47,6 +47,7 @@ local function newEnemy(x, y, z)
     --     })
 
     self.userData = {
+        id = "enemy",
         position = {self.x, self.y},
         spawn_position = {x, y},
         stamina = 0,
@@ -199,7 +200,7 @@ function Enemy:hasStamina_evalFunction()
 end
 
 function Enemy:checkPlayer_evalFunction()
-    local dist = getDistance(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
+    local dist = getDistance(self.userData.position[1], self.userData.position[2], player_1.userData.position[1], player_1.userData.position[2])
     --print("Evaluating checkPlayer", dist)
     if dist > 100 then
         return 1
@@ -219,6 +220,9 @@ end
 function Enemy:die_inizializeFunction()
     --print("Inizialize Die Action")
     self.body:setLinearDamping(2)
+    --self.sprite:setRotation(-math.pi/2,0,0)
+    --self.sprite:setScale(nil,nil,self.sprite.frame_height/16)
+    --self.z_sprite_offset = -self.depth/16 + 1
     self:setAnimation("die", self.anim_angle, self.anim_flip_x, 1)
     self.userData.enemy_damage = 0
 end
@@ -289,7 +293,7 @@ function Enemy:seek_inizializeFunction()
 end
 
 function Enemy:seek_updateFunction(dt)
-    local dif_x, dif_y = difVector(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
+    local dif_x, dif_y = difVector(self.userData.position[1], self.userData.position[2], player_1.userData.position[1], player_1.userData.position[2])
     local norm_x, norm_y = normalizeVector(dif_x, dif_y)
     local desired_vel_x, desired_vel_y = scaleVector(norm_x, norm_y, 80)
     local vel_x, vel_y = self.body:getLinearVelocity()
@@ -316,7 +320,7 @@ function Enemy:seekVel_inizializeFunction()
 end
 
 function Enemy:seekVel_updateFunction(dt)
-    local dif_x, dif_y = difVector(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
+    local dif_x, dif_y = difVector(self.userData.position[1], self.userData.position[2], player_1.userData.position[1], player_1.userData.position[2])
     self.angle = getAngle(dif_x,dif_y, 0,0)
     self.speed = 40
     self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
@@ -383,7 +387,7 @@ function Enemy:chargeAttack_updateFunction(dt)
         -- Telegraph attack
         --print("Telegraph Attack")
         self:setAnimation("attack_telegraph", 2, self.anim_flip_x, 1)
-        self.angle = getAngle(self.userData.position[1], self.userData.position[2], player_1.x, player_1.y)
+        self.angle = getAngle(self.userData.position[1], self.userData.position[2], player_1.userData.position[1], player_1.userData.position[2])
     else
         -- Perform the attack
         --print("Perfom Attack")

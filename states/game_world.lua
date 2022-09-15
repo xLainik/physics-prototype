@@ -1,6 +1,5 @@
 
 local State = require("states/state")
-
 local GameWorld = State:new()
 
 function GameWorld:new()
@@ -12,7 +11,7 @@ end
 
 function GameWorld:onEnter()
 
-    love.graphics.setFont(FONT_SMALL)
+    love.graphics.setFont(GAME.FONT_SMALL)
 
     -- Import libraries
     g3d = require("libs/g3d")
@@ -26,11 +25,8 @@ function GameWorld:onEnter()
 
     SCALE3D = {x = 16, y = -16, z = 16} -- 16 love:physics unit = 16 pixeles = 1 g3d unit
 
-    love.graphics.setDefaultFilter("nearest") --no atialiasing
     debug_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
     debug_canvas:setFilter("nearest","nearest") --no atialiasing
-    main_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
-    main_canvas:setFilter("nearest","nearest") --no atialiasing
 
     DEBUG_OFFSET = {0, 0}
 
@@ -38,8 +34,6 @@ function GameWorld:onEnter()
     shadow_buffer_canvas:setFilter("nearest","nearest")
     --variance_shadow_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENWIDTH, {format="depth24", readable=true})
     --variance_shadow_canvas:setFilter("linear","linear")
-
-    CAM_OFFSET = {0, 0}
 
     DISTLIGHTCAM = 20
     DISTMAINCAM = 10
@@ -66,27 +60,29 @@ function GameWorld:onEnter()
     newShadow = require("objects/shadow")
     newSprite = require("objects/sprite")
 
-    TOTAL_MAPS = 1
-    Map = require("maps/map")
-    Scene = require("maps/scene")
+    -- Load data saved at source
+    self.data = {}
+    self:loadData()
+
+    local Map = require("maps/map")
 
     -- Load Map
-    current_map = Map:new(1)
+    current_map = Map:new(self.data["current_map"])
 
-    -- Load First Scene
-    current_scene = Scene:new(1)
-
-    -- Load Player, Cursor and Circle
+    -- Load Player and Circle (Entities that are always loaded)
     local newPlayer = require("objects/player")
-    local newCursor = require("objects/cursor")
     local newCircle = require("objects/circle")
 
-    love.mouse.setVisible(false)
+    GAME.cursor:gameWorldEnter()
+    player_1 = newPlayer(GAME.cursor)
+    circle_1 = newCircle()
 
-    cursor_1 = newCursor()
-    player_1 = newPlayer(70, 95, 100, cursor_1)
-    circle_1 = newCircle(30, 30, 8, 20)
+    -- Load Scene
+    current_map:enterScene(1)
 
+    --self:saveData()
+
+    -- Debug collisions and 3d orbiting
     view = {"final_view", "hitbox_debug", "3d_debug"}
     view_index = 1
     view_timer = 0.1
@@ -95,6 +91,32 @@ end
 
 function GameWorld:onExit()
     --pass
+end
+
+function GameWorld:saveData()
+    local table_ = {}
+    for name, element in pairs(self.data) do
+        local union = element
+        if type(union) == "table" then
+            union = table.concat(element, " ")
+        end
+        table.insert(table_, name.." "..union) 
+    end
+    local file = io.open(GAME.game_directory.."/data/save_2.dat", "w+")
+    file:write(table.concat(table_, "\n"))
+    file:close()
+end
+
+function GameWorld:loadData()
+    local read_lines = {}
+    for line in love.filesystem.lines("data/save_1.dat") do
+        table.insert(read_lines, getTable(line))
+    end
+    for index, line in ipairs(read_lines) do
+        local data_name = line[1]
+        table.remove(line, 1)
+        self.data[data_name] = getFormatedTable(line)
+    end
 end
 
 function GameWorld:update(dt)
@@ -117,14 +139,9 @@ function GameWorld:update(dt)
             view_timer = 0
         elseif love.keyboard.isDown("t") then
             view_timer = 0
-            --print(#tile_imesh.instanced_positions)
-            --tile_imesh:addInstance({math.random(1, 10),math.random(-10, -1),1}, {0,0})
-            local remove_index = math.random(1, projectile_imesh.instanced_count)
-            --print("remove index: ", remove_index)
-            table.insert(DELETEQUEUE, {group = "Projectile", index = remove_index})
         elseif love.keyboard.isDown("f11") then
             view_timer = 0
-            main_canvas:newImageData():encode("png", "screen"..tostring(os.time())..".png")
+            GAME.main_canvas:newImageData():encode("png", "screen"..tostring(os.time())..".png")
             love.graphics.captureScreenshot("screen"..tostring(os.time()).."_scaled"..".png")
         end
     end
@@ -136,15 +153,15 @@ function GameWorld:update(dt)
     end
 
     --3D Cam update
-    CAM_OFFSET = main_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
+    GAME.CANVAS_OFFSET = main_camera:followPointOffset(player_1.userData.position[1]/SCALE3D.x, player_1.userData.position[2]/SCALE3D.y)
 
-    light_camera:followPointOffset(player_1.x/SCALE3D.x, player_1.y/SCALE3D.y)
+    light_camera:followPointOffset( player_1.userData.position[1]/SCALE3D.x,  player_1.userData.position[2]/SCALE3D.y)
 
-    if SCREEN_SHAKING > 0 then
-        local random_x = math.random(2*SCREEN_SHAKING)
-        local random_y = math.random(2*SCREEN_SHAKING)
-        CAM_OFFSET[1] = CAM_OFFSET[1] + random_x
-        CAM_OFFSET[2] = CAM_OFFSET[2] + random_y
+    if GAME.SCREEN_SHAKING > 0 then
+        local random_x = math.random(2*GAME.SCREEN_SHAKING)
+        local random_y = math.random(2*GAME.SCREEN_SHAKING)
+        GAME.CANVAS_OFFSET[1] = GAME.CANVAS_OFFSET[1] + random_x
+        GAME.CANVAS_OFFSET[2] = GAME.CANVAS_OFFSET[2] + random_y
     end
 end
 
@@ -161,10 +178,9 @@ function GameWorld:draw()
 
         DEBUG_OFFSET = {-current_camera.target[1]*16 + 229, current_camera.target[2]*13 + 136}
         love.graphics.push()
-        love.graphics.translate( unpack(DEBUG_OFFSET) )
+        love.graphics.translate(unpack(DEBUG_OFFSET))
 
-
-        for _, body in pairs(WORLD:getBodies()) do
+        for _, body in pairs(current_map.WORLD:getBodies()) do
             if body:isActive() == true then
                 for _, fixture in pairs(body:getFixtures()) do
                     if true then
@@ -186,45 +202,40 @@ function GameWorld:draw()
         love.graphics.pop()
     end
 
-    -- Draw UI elements (Original Resolution)
-    love.graphics.setDepthMode()
-    love.graphics.setCanvas(main_canvas)
+end
 
-    love.graphics.setCanvas()
-    --print(unpack(CAM_OFFSET))
-    
-    love.graphics.draw(main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, CAM_OFFSET[1], CAM_OFFSET[2])
-    
+function GameWorld:drawUI()
+    -- Draw Entities/projectiles/particles UI from current Scene
+    current_map:drawUI()
+
+    -- Drawing debug stuff
     if view[view_index] == "hitbox_debug" then
-        love.graphics.draw(debug_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE*0.8125, CAM_OFFSET[1], CAM_OFFSET[2])
+        love.graphics.setColor(0.2,0.1,0.9,0.8)
+        love.graphics.draw(debug_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE*0.8125, GAME.CANVAS_OFFSET[1], GAME.CANVAS_OFFSET[2])
     end
 
     -- Draw UI elements (Window size Resolution)
     love.graphics.setColor(244/255, 248/255, 255/255)
     love.graphics.print("FPS: "..tostring(FPS), 4*WINDOWSCALE, 4*WINDOWSCALE)
-
-    -- Draw Entities/projectiles/particles UI from current Scene
-    current_scene:drawUI()
-
 end
 
--- function love.mousemoved(x,y, dx,dy)
+function love.mousemoved(x,y, dx,dy)
 
---     if dx ~= 0 and dy ~= 0 and view[view_index] == "3d_debug" then
---         current_camera:thirdPersonLook(dx,dy,player_1.x/SCALE3D.x, player_1.y/SCALE3D.y, player_1.z/SCALE3D.z)
---     end
--- end
+    if dx ~= 0 and dy ~= 0 and view[view_index] == "3d_debug" then
+        current_camera:thirdPersonLook(dx,dy,  player_1.userData.position[1]/SCALE3D.x,  player_1.userData.position[2]/SCALE3D.y,  player_1.userData.position[3]/SCALE3D.z)
+    end
+end
 
--- function love.wheelmoved(x, y)
---     if y > 0 then
---         current_camera:updateOrthographicMatrix(current_camera.size - 0.1)
---     elseif y < 0 then
---         current_camera:updateOrthographicMatrix(current_camera.size + 0.1)
---     end
--- end
+function love.wheelmoved(x, y)
+    if y > 0 then
+        current_camera:updateOrthographicMatrix(current_camera.size - 0.1)
+    elseif y < 0 then
+        current_camera:updateOrthographicMatrix(current_camera.size + 0.1)
+    end
+end
 
--- function love.mousepressed( x, y, button, istouch, presses )
---     --
--- end
+function love.mousepressed( x, y, button, istouch, presses )
+    --
+end
 
 return GameWorld

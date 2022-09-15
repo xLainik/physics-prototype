@@ -4,7 +4,14 @@ Map.__index = Map
 function Map:new(index)
     local self = setmetatable({}, Map)
 
+    -- Index to know which map it is, and what to load on memory
     self.index = index
+
+    -- All scenes that can be loaded
+    local Scene_1 = require("maps/scene_1")
+
+    self.SCENES = {}
+    self.SCENES["Scene_1"] = Scene_1:new()
 
     --love:physics init
     self.WORLD = love.physics.newWorld(0, 0, true)
@@ -29,12 +36,18 @@ function Map:new(index)
     -- Objects scripts ----------------------------------    
     local newBox = require("objects/box")
     local newPolygon = require("objects/polygon")
-    local newEnemy_Slime = require("objects/enemies/enemy_Slime")
+
+    local newPlayer = require("objects/player")
+    local newCircle = require("objects/circle")
+
+    local newEnemy_Slime = require("objects/enemies/enemy_slime")
     local newProjectile_Simple = require("objects/projectiles/projectile_simple")
     local newParticle_Damage = require("objects/particles/particle_damage")
     local newParticle_Circle = require("objects/particles/particle_circle")
 
     self.SPAWNFUNCTIONS = {}
+    self.SPAWNFUNCTIONS["Player"] = newPlayer
+    self.SPAWNFUNCTIONS["Circle"] = newCircle
     self.SPAWNFUNCTIONS["Box"] = newBox
     self.SPAWNFUNCTIONS["Enemy_Slime"] = newEnemy_Slime
     self.SPAWNFUNCTIONS["Projectile_Simple"] = newProjectile_Simple
@@ -45,6 +58,11 @@ function Map:new(index)
     self.DELETEQUEUE = {}
 
     return self
+end
+
+function Map:enterScene(scene_index)
+    current_scene = self.SCENES["Scene_1"]
+    current_scene:onEnter(self.index, scene_index)
 end
 
 function Map:update(dt)
@@ -66,8 +84,8 @@ function Map:update(dt)
     end    
 
     player_1:update(dt)
-    cursor_1:update(dt)
-    cursor_1:updateCoords(current_camera.target[1], current_camera.target[2], player_1.z)
+    GAME.cursor:update(dt)
+    GAME.cursor:updateCoords(current_camera.target[1], current_camera.target[2], player_1.userData.position[3])
     circle_1:update(dt)
 
     current_scene:update(dt)
@@ -109,6 +127,10 @@ end
 
 function Map:draw()
     current_scene:draw()
+end
+
+function Map:drawUI()
+    current_scene:drawUI()
 end
 
 function beginContact(a, b, contact)

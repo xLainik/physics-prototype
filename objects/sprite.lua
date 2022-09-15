@@ -101,7 +101,7 @@ function Sprite:setRotation(rx, ry, rz)
 end
 
 function Sprite:setScale(sx, sy, sz)
-    self.scale = {sx, sy, sz}
+    self.scale = {sx or self.scale[1], sy or self.scale[2], sz or self.scale[3]}
     self:updateMatrix()
 end
 

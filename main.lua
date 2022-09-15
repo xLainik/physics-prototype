@@ -8,35 +8,24 @@ function love.load()
     -- 	print(name, i)
     -- end
 
-    -- Fonts and sounds
-    FONT_SMALL = love.graphics.newFont("assets/fonts/RobotoCondensed-Bold.ttf", 8*WINDOWSCALE)
-    FONT_SMALL:setFilter("linear")
-    love.graphics.setFont(FONT_SMALL)
-
-    -- Fonts and sounds
-    FONT_LARGE = love.graphics.newFont("assets/fonts/RobotoCondensed-Bold.ttf", 16*WINDOWSCALE)
-    FONT_LARGE:setFilter("linear")
+    -- Basic love config
+    love.graphics.setDefaultFilter("nearest") --no atialiasing
 
     local Game = require("game")
-    GameWorldState = require("states/game_world")
-    MainMenuState = require("states/main_menu")
 
-    GAME = Game:new()
+    GAME = Game:new() 
 
-    game_world_state = GameWorldState:new()
-    GAME:enterState(game_world_state)
-
-    SCREEN_SHAKING = 0
-    GAME_SPEED = 1
+    GAME:enterState("game_world")
 
 	FPS = 60
 end
 
 function love.update(dt)
 
-	dt = dt*GAME_SPEED
+	dt = dt*GAME.GAME_SPEED
 
 	GAME:checkInputs()
+	GAME.cursor:update(dt)
 	GAME.current_state:update(dt)
 
 	FPS = love.timer.getFPS()
@@ -44,6 +33,10 @@ end
 
 function love.draw()
 	GAME.current_state:draw()
+	love.graphics.setCanvas()
+	love.graphics.draw(GAME.main_canvas, -16, -16, 0, WINDOWSCALE, WINDOWSCALE, GAME.CANVAS_OFFSET[1], GAME.CANVAS_OFFSET[2])
+	GAME.current_state:drawUI()
+	GAME.cursor:screenDraw()
 end
 
 function love.keypressed(key, scancode, isrepeat)

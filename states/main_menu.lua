@@ -10,7 +10,7 @@ function MainManu:new()
 end
 
 function MainManu:onEnter()
-    love.graphics.setFont(FONT_LARGE)
+    love.graphics.setFont(GAME.FONT_LARGE)
 end
 
 function MainManu:onExit()
@@ -19,15 +19,18 @@ end
 
 function MainManu:update(dt)
     if GAME.actions["enter"] then
-        game_world_state = GameWorldState:new()
-        GAME:enterState(game_world_state)
+        GAME:enterState("game_world")
     end
 end
 
 function MainManu:draw()
+    -- pass
+end
+
+function MainManu:drawUI()
     love.graphics.setColor(244/255, 248/255, 255/255)
-    local width = FONT_LARGE:getWidth("Press Enter")
-    local height = FONT_LARGE:getHeight()
+    local width = GAME.FONT_LARGE:getWidth("Press Enter")
+    local height = GAME.FONT_LARGE:getHeight()
     love.graphics.printf("Press Enter", ((SCREENWIDTH-32)/2)*WINDOWSCALE - width/2, ((SCREENHEIGHT-32)/2)*WINDOWSCALE - height/2, 200)
 end
 

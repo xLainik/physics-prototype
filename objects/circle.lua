@@ -1,11 +1,11 @@
 local Circle = {}
 Circle.__index = Circle
 
-local function newCircle(x, y, num_vertices, radius)
+local function newCircle()
 	local self = setmetatable({}, Circle)
 
-	self.num_vertices = n_vertex or 8
-	self.radius = radius*WINDOWSCALE or 20
+	self.num_vertices = 8
+	self.radius = 20*WINDOWSCALE
 	self.polygon_size = self.num_vertices
 	
 	self.origin_vertices = {}

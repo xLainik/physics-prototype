@@ -4,11 +4,36 @@ Game.__index = Game
 function Game:new()
     local self = setmetatable({}, Game)
 
+    -- Game states
     self.state_stack = {}
     self.current_state = nil
 
+    -- Directories
     self:setup_directories()
 
+    -- Screen shake and game speed variables
+    self.SCREEN_SHAKING = 0
+    self.GAME_SPEED = 1
+
+    -- Cursor
+    local newCursor = require("objects/cursor")
+    love.mouse.setVisible(false)
+    self.cursor = newCursor()
+
+    -- Screen Canvas
+    self.main_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
+    self.main_canvas:setFilter("nearest","nearest") --no atialiasing
+    self.CANVAS_OFFSET = {0, 0}
+
+    -- Fonts and sounds (Better placed elsewhere)
+    self.FONT_SMALL = love.graphics.newFont(self.fonts_directory.."/RobotoCondensed-Bold.ttf", 8*WINDOWSCALE)
+    self.FONT_SMALL:setFilter("linear")
+    love.graphics.setFont(self.FONT_SMALL)
+
+    self.FONT_LARGE = love.graphics.newFont(self.fonts_directory.."/RobotoCondensed-Bold.ttf", 16*WINDOWSCALE)
+    self.FONT_LARGE:setFilter("linear")
+
+    -- Options
     self.options = {}
     self.options["up"] = "w"
     self.options["down"] = "s"
@@ -19,6 +44,7 @@ function Game:new()
     self.options["shift"] = "lshift"
     self.options["enter"] = "return"
 
+    -- Inputs -> Actions
     self.actions = {}
     for action, binding in pairs(self.options) do
         self.actions[action] = false
@@ -43,15 +69,20 @@ function Game:checkInputs()
     end
 end
 
-function Game:enterState(state)
+function Game:enterState(state_name)
+
+    local state = require(self.states_directory.."/"..state_name)
+    local state_instance = state:new()
+
+
     if #self.state_stack > 0 then
         self.previous_state = self.state_stack[#self.state_stack]
     end
 
-    table.insert(self.state_stack, state)
-    self.current_state = state
+    table.insert(self.state_stack, state_instance)
+    self.current_state = state_instance
 
-    state:onEnter()
+    state_instance:onEnter()
 end
 
 function Game:exitState()

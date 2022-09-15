@@ -196,7 +196,9 @@ function Projectile:hitboxIsHit(entity)
     local category = entity.fixture:getCategory()
     --print("Projectile Hitbox is hit: ", category)
     if self.hit_set[category] ~= nil then
-        self.active = false
+        if entity.userData ~= nil and entity.userData.hp > 0 then
+            self.active = false
+        end
     end
 end
 function Projectile:hitboxGotHit(entity)

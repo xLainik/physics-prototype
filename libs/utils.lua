@@ -1,4 +1,6 @@
 
+-- Trig and vector operations --------------------------------------
+
 function getAngle(x1,y1, x2,y2)
 	return math.atan2(y2-y1, x2-x1)
 end
@@ -46,4 +48,24 @@ function getIndex(table_, element)
             return index
        end
     end
+end
+
+-- Data manipulation ----------------------------------------------------
+
+function getTable(string_)
+	local words = {}
+    for word in string.gmatch(string_, "([^%s]+)") do
+        table.insert(words, word)
+    end
+    return words
+end
+
+function getFormatedTable(table_)
+	local new_table = {}
+    for _, element in ipairs(table_) do
+        -- Check if it is a number or a string
+        table.insert(new_table, tonumber(element) or element)
+    end
+    if #new_table == 1 then return new_table[1] end
+    return new_table
 end

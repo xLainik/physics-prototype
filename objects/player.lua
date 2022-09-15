@@ -1,21 +1,16 @@
 local Player = {}
 Player.__index = Player
 
-local function newPlayer(x, y, z, cursor)
+local function newPlayer(cursor)
     local self = setmetatable({}, Player)
 
     self.cursor = cursor
 
-    -- Position of the xyz center in 3D
-    self.x = x or 50
-    self.y = y or 50
-    self.z = z or 40
-
     self.radius = 4.5
 
     self.depth = 24
-    self.top = self.z + self.depth/2
-    self.bottom = self.z - self.depth/2
+    self.top = self.depth/2
+    self.bottom = -self.depth/2
 
     self.z_flat_offset = self.depth/2
 
@@ -45,8 +40,8 @@ local function newPlayer(x, y, z, cursor)
 
     -- UserData
     self.userData = {
-        position = {self.x, self.y},
-        spawn_position = {x, y},
+        id = "player",
+        position = {0,0,0},
         stamina = 10,
         hp = 100,
         max_hp = 100,
@@ -80,7 +75,7 @@ local function newPlayer(x, y, z, cursor)
     self.tree:setBranch(self.isAlive_branch)
 
     --Physics
-    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.userData.position[1], self.userData.position[2], "dynamic")
     self.body:setFixedRotation(true)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
@@ -110,7 +105,6 @@ local function newPlayer(x, y, z, cursor)
 
     -- Shadow
     self.shadow = newShadow(self)
-    self:setHeight()
 
     -- Animations
     local sheet = love.graphics.newImage(GAME.sprites_directory.."/sprites/player/player.png")
@@ -225,10 +219,10 @@ function Player:control_updateFunction(dt)
 
     -- -- Flying mode
     -- if GAME.actions["action_1"] then
-    --     self.z = self.z + 200*dt
+    --     self.userData.position[3] = self.userData.position[3] + 200*dt
     --     self:setHeight()
     -- elseif GAME.actions["shift"] then
-    --     self.z = self.z - 50*dt
+    --     self.userData.position[3] = self.userData.position[3] - 50*dt
     --     self:setHeight()
     -- end
 
@@ -241,7 +235,7 @@ function Player:control_updateFunction(dt)
 
     -- Mouse Input
     if self.cursor:click() then
-        --print("PLAYER POS: ", self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+        --print("PLAYER POS: ", self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
         --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
         --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
         -- dx, dy = 0, 0
@@ -249,11 +243,11 @@ function Player:control_updateFunction(dt)
         --     dx, dy = self.body:getLinearVelocity()
         --     dx, dy = dx, dy
         -- end
-        local angle = -1*(getAngle(self.x/SCALE3D.x, (self.y-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
-        --print("ANGLE: ", tostring(getAngle(self.x/SCALE3D.x, self.y/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        local spawn_point = {self.x + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.y - self.z_flat_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
-        table.insert(current_map.SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.z, dx, dy, angle, {player_damage = 2}} })
-        table.insert(current_map.SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.z, 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
+        local angle = -1*(getAngle(self.userData.position[1]/SCALE3D.x, (self.userData.position[2]-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
+        --print("ANGLE: ", tostring(getAngle(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
+        local spawn_point = {self.userData.position[1] + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.userData.position[2] - self.z_flat_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
+        table.insert(current_map.SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.userData.position[3], dx, dy, angle, {player_damage = 2}} })
+        table.insert(current_map.SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.userData.position[3], 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
     end
 
     if self.userData.control == true then
@@ -278,9 +272,15 @@ function Player:not_control_cleanUpFunction()
     --print("CleanUp Not Control Action")
 end
 
-function Player:update(dt)
+function Player:loadData(user_data)
+    for name, element in pairs(user_data) do
+        self.userData[name] = element
+    end
+    self:setHeight()
+    self.body:setPosition(self.userData.position[1], self.userData.position[2])
+end
 
-    self:updateUserData()
+function Player:update(dt)
 
     self.tree:update(dt)
 
@@ -305,15 +305,15 @@ function Player:update(dt)
 
     self.body:setLinearVelocity(math.cos(self.angle) * self.speed, math.sin(self.angle) * self.speed)
 
-    --self.x, self.y = self.body:getX(), self.body:getY()
+    --self.userData.position[1], self.userData.position[2] = self.body:getX(), self.body:getY()
 
-    self.x, self.y = math.floor(self.body:getX()), math.floor(self.body:getY())
+    self.userData.position[1], self.userData.position[2] = math.floor(self.body:getX()), math.floor(self.body:getY())
 
     --self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_flat_offset - self.height_flat/2)*(0.8125)
 
     --Shadow
-    self.shadow:updatePosition(self.x, self.y, self.z)
+    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
     self:updateShadow()
     
     --print(unpack(self.shadow.floor_buffer))
@@ -349,15 +349,15 @@ function Player:update(dt)
     end
 
     -- Check top and bottom floor, and then apply z velocity
-    local new_z = self.z + self.dz*dt
+    local new_z = self.userData.position[3] + self.dz*dt
     if self.dz > 0 and new_z + self.depth/2 < self.top_floor then
-        self.z = new_z
+        self.userData.position[3] = new_z
     elseif self.dz < 0 then
         if new_z - self.depth/2 > self.bottom_floor then
-            self.z = new_z
+            self.userData.position[3] = new_z
         else
             self.on_ground = true
-            self.z = self.bottom_floor + self.depth/2 + 0.01
+            self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
         end
     end
 
@@ -366,14 +366,10 @@ function Player:update(dt)
     self.sprite_2:update(dt)
 
     self:setHeight()
-    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
-    self.sprite_1:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.2, self.z/SCALE3D.z + self.z_sprite_offset)
-    self.sprite_2:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y - 0.15, self.z/SCALE3D.z + self.z_sprite_offset)
+    self.model:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
+    self.sprite_1:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y - 0.2, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset)
+    self.sprite_2:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y - 0.15, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset)
 
-end
-
-function Player:updateUserData()
-    self.userData.position = {self.x, self.y}
 end
 
 function Player:resetTree()
@@ -398,7 +394,7 @@ function Player:draw(shader, camera, shadow_map)
 end
 
 function Player:debugDraw()
-    local x, y = main_camera:pointOnScreen(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    local x, y = main_camera:pointOnScreen(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
     local x2, y2 = x - self.width_flat/2*WINDOWSCALE, y - self.height_flat*WINDOWSCALE
     love.graphics.setColor(0.9, 0.8, 0.9, 1)
     love.graphics.setLineWidth(1*WINDOWSCALE)
@@ -450,8 +446,8 @@ function Player:getAnimationAngle()
 end
 
 function Player:setHeight()
-    self.top = self.z + self.depth/2
-    self.bottom = self.z - self.depth/2
+    self.top = self.userData.position[3] + self.depth/2
+    self.bottom = self.userData.position[3] - self.depth/2
     local mask = {11,12,13,14}
 
     for i, coll_cat in ipairs(mask) do

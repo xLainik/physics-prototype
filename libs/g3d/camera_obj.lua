@@ -242,7 +242,7 @@ end
 function camera:pointOnScreen(x,y,z)
     local dif_x, dif_y, dif_z = x-self.target[1], y-self.target[2], z-self.target[3]
     
-    return (((dif_x)*16 + 0.5*SCREENWIDTH) - CAM_OFFSET[1])*WINDOWSCALE - 16, ((dif_y)*-13 + (dif_z)*-9  + 0.5*SCREENHEIGHT - CAM_OFFSET[2])*WINDOWSCALE - 16
+    return (((dif_x)*16 + 0.5*SCREENWIDTH) - GAME.CANVAS_OFFSET[1])*WINDOWSCALE - 16, ((dif_y)*-13 + (dif_z)*-9  + 0.5*SCREENHEIGHT - GAME.CANVAS_OFFSET[2])*WINDOWSCALE - 16
 end
 
 return newCamera
