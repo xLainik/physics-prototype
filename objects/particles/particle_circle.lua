@@ -7,14 +7,12 @@ local function newParticle(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.type = "damage"
     self.index = nil
 
-    --Position of the 3D cylinder center
-    self.x = x
-    self.y = y
-    self.z = z
-
     self.angle = ini_angle
 
-    self.userData = {}
+    self.userData = {
+        position = {x,y,z},
+        spawn_position = {x,y,z}
+        }
 
     -- More user data
     self.speed = 0
@@ -27,7 +25,7 @@ local function newParticle(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.active = true
 
     --Physics
-    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.userData.position[1], self.userData.position[2], "dynamic")
     self.body:setFixedRotation(true)
     self.body:setMass(1)
 
@@ -69,7 +67,7 @@ function Particle:setVelocity(speed, angle)
 end
 
 function Particle:update(dt)
-    self.x, self.y = self.body:getX(), self.body:getY()
+    self.userData.position[1], self.userData.position[2] = self.body:getX(), self.body:getY()
 
     self.timer = self.timer + dt
 
@@ -84,7 +82,7 @@ function Particle:update(dt)
     self.scale[3] = self.scale[3] + 2*dt
 
     -- Instanced Mesh update
-    self.position = {self.x/SCALE3D.x, self.y/SCALE3D.y + self.y_sprite_offset, self.z/SCALE3D.z + self.z_sprite_offset}
+    self.position = {self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y + self.y_sprite_offset, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
     current_scene.particle_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())

@@ -25,33 +25,19 @@ function GameWorld:onEnter()
 
     SCALE3D = {x = 16, y = -16, z = 16} -- 16 love:physics unit = 16 pixeles = 1 g3d unit
 
+    -- Debug canvas for drawing all active physics bodies
     debug_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENHEIGHT)
     debug_canvas:setFilter("nearest","nearest") --no atialiasing
 
     DEBUG_OFFSET = {0, 0}
 
-    shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH*1.50, SCREENWIDTH*1.50, {format="depth24", readable=true})
-    shadow_buffer_canvas:setFilter("nearest","nearest")
-    --variance_shadow_canvas = love.graphics.newCanvas(SCREENWIDTH, SCREENWIDTH, {format="depth24", readable=true})
-    --variance_shadow_canvas:setFilter("linear","linear")
-
-    DISTLIGHTCAM = 20
+    -- Main camera that follows the player around
     DISTMAINCAM = 10
     CAMVECTOR_MAIN = { 0 * DISTMAINCAM, -3 * DISTMAINCAM, 4 * DISTMAINCAM}
-    LIGHTVECTOR_TOP = { 0, -0.00001, 1 * DISTLIGHTCAM} -- in g3d units
-    LIGHTVECTOR_LF = {-0.404508497 * DISTLIGHTCAM, -0.700629269 * DISTLIGHTCAM, 0.587785252 * DISTLIGHTCAM} -- in g3d units
-    LIGHTVECTOR_ANGLE = { 0 * DISTMAINCAM, -1 * DISTMAINCAM, 1 * DISTMAINCAM}
-    CURRENTLIGHT_VECTOR = LIGHTVECTOR_LF
-
-    LIGHTRAMP_TEXTURE = love.graphics.newImage("assets/shaders/light_ramp.png")
 
     main_camera = g3d.newCamera(SCREENWIDTH/SCREENHEIGHT)
     main_camera:lookAt(CAMVECTOR_MAIN[1], CAMVECTOR_MAIN[2], CAMVECTOR_MAIN[3], 0,0,0)
     main_camera:updateOrthographicMatrix((SCREENHEIGHT/2)/SCALE3D.x)
-
-    light_camera = g3d.newCamera(shadow_buffer_canvas:getWidth()/shadow_buffer_canvas:getHeight())
-    light_camera:lookAt(CURRENTLIGHT_VECTOR[1], CURRENTLIGHT_VECTOR[2], CURRENTLIGHT_VECTOR[3], 0, 0, 0)
-    light_camera:updateOrthographicMatrix((SCREENWIDTH/2)/SCALE3D.x)
 
     current_camera = main_camera
 
@@ -77,8 +63,10 @@ function GameWorld:onEnter()
     player_1 = newPlayer(GAME.cursor)
     circle_1 = newCircle()
 
-    -- Load Scene
-    current_map:enterScene(1)
+    player_1:loadData({hp = 100, position = {80, 70, 100}})
+
+    -- Load Section
+    current_map:enterSection(1)
 
     --self:saveData()
 
@@ -151,11 +139,6 @@ function GameWorld:update(dt)
     else
         love.mouse.setRelativeMode(false)
     end
-
-    --3D Cam update
-    GAME.CANVAS_OFFSET = main_camera:followPointOffset(player_1.userData.position[1]/SCALE3D.x, player_1.userData.position[2]/SCALE3D.y)
-
-    light_camera:followPointOffset( player_1.userData.position[1]/SCALE3D.x,  player_1.userData.position[2]/SCALE3D.y)
 
     if GAME.SCREEN_SHAKING > 0 then
         local random_x = math.random(2*GAME.SCREEN_SHAKING)

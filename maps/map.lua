@@ -8,7 +8,7 @@ function Map:new(index)
     self.index = index
 
     -- All scenes that can be loaded
-    local Scene_1 = require("maps/scene_1")
+    local Scene_1 = require("maps/scenes/scene_1")
 
     self.SCENES = {}
     self.SCENES["Scene_1"] = Scene_1:new()
@@ -18,7 +18,7 @@ function Map:new(index)
     self.WORLD:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
     -- Fixture Category and Mask
-    --1 -> Everything else (Shadows and projectiles for now)
+    --1 -> Everything else
     --2 -> Player 
     --3 -> Enemies 1
     --4 -> Enemies 2
@@ -32,27 +32,33 @@ function Map:new(index)
     --12 -> Unbreakable terrain (Floor 2)
     --13 -> Unbreakable terrain (Floor 3)
     --14 -> Unbreakable terrain (Floor 4)
+    --15 -> Unbreakable terrain (Floor 5)
+    --16 -> Unbreakable terrain (Floor 6)
 
     -- Objects scripts ----------------------------------    
-    local newBox = require("objects/box")
-    local newPolygon = require("objects/polygon")
+    local newBox = require(GAME.objects_directory.."/box")
+    local newPolygon = require(GAME.objects_directory.."/polygon")
+    local newDoor = require(GAME.maps_directory.."/door")
 
-    local newPlayer = require("objects/player")
-    local newCircle = require("objects/circle")
+    local newPlayer = require(GAME.objects_directory.."/player")
+    local newCircle = require(GAME.objects_directory.."/circle")
 
-    local newEnemy_Slime = require("objects/enemies/enemy_slime")
-    local newProjectile_Simple = require("objects/projectiles/projectile_simple")
-    local newParticle_Damage = require("objects/particles/particle_damage")
-    local newParticle_Circle = require("objects/particles/particle_circle")
+    local newEnemy_Slime = require(GAME.objects_directory.."/enemies/enemy_slime")
+    local newProjectile_Simple = require(GAME.objects_directory.."/projectiles/projectile_simple")
+    local newParticle_Damage = require(GAME.objects_directory.."/particles/particle_damage")
+    local newParticle_Circle = require(GAME.objects_directory.."/particles/particle_circle")
 
     self.SPAWNFUNCTIONS = {}
     self.SPAWNFUNCTIONS["Player"] = newPlayer
     self.SPAWNFUNCTIONS["Circle"] = newCircle
     self.SPAWNFUNCTIONS["Box"] = newBox
+    self.SPAWNFUNCTIONS["Door"] = newDoor
     self.SPAWNFUNCTIONS["Enemy_Slime"] = newEnemy_Slime
     self.SPAWNFUNCTIONS["Projectile_Simple"] = newProjectile_Simple
     self.SPAWNFUNCTIONS["Particle_Damage"] = newParticle_Damage
     self.SPAWNFUNCTIONS["Particle_Circle"] = newParticle_Circle
+
+    self.SPAWNFUNCTIONS["enterSection"] = self.enterSection
 
     self.SPAWNQUEUE = {}
     self.DELETEQUEUE = {}
@@ -60,9 +66,10 @@ function Map:new(index)
     return self
 end
 
-function Map:enterScene(scene_index)
+function Map.enterSection(self, section_index, door_index)
     current_scene = self.SCENES["Scene_1"]
-    current_scene:onEnter(self.index, scene_index)
+    -- Set all bodies inactives
+    current_scene:onEnter(self.index, section_index, door_index)
 end
 
 function Map:update(dt)
@@ -73,11 +80,9 @@ function Map:update(dt)
     for _, cont in pairs(all_conts) do
         if cont:isTouching() == true then
             local a, b = cont:getFixtures()
-            local user_a, user_b = a:getUserData(), b:getUserData()
-            if a:getCategory() == 6 then
+            if a:getCategory() == 6 and b:getCategory() == 6 then
+                local user_a, user_b = a:getUserData(), b:getUserData()
                 user_a:hitboxIsHit(user_b)
-            end
-            if b:getCategory() == 6 then
                 user_b:hitboxIsHit(user_a)
             end
         end
@@ -93,11 +98,11 @@ function Map:update(dt)
     --Spawn the stuff from SPAWNQUEUE
     for i, spawn in pairs(self.SPAWNQUEUE) do
         obj = self.SPAWNFUNCTIONS[spawn["group"]](unpack(spawn["args"]))
-        local words = {}
-        for w in string.gmatch(spawn["group"], "([^_]+)") do
-            table.insert(words, w)
-        end
-        local obj_type = words[1]
+        -- local words = {}
+        -- for w in string.gmatch(spawn["group"], "([^_]+)") do
+        --     table.insert(words, w)
+        -- end
+        -- local obj_type = words[1]
     end
 
     -- Projectiles update from current Scene
@@ -134,32 +139,18 @@ function Map:drawUI()
 end
 
 function beginContact(a, b, contact)
-    local user_a = a:getUserData()
-    local user_b = b:getUserData()
-    if a:getCategory() == 6 then
-        user_a:hitboxGotHit(user_b)
-    else
+    if a:getCategory() ~= 6 and b:getCategory() ~= 6 then
+        local user_a, user_b = a:getUserData(), b:getUserData()
         user_a:gotHit(user_b)
-    end
-    if b:getCategory() == 6 then
-        user_b:hitboxGotHit(user_a)
-    else
         user_b:gotHit(user_a)
     end
     --print(a:getUserData().." colliding with "..b:getUserData().."\n")
 end
 
 function endContact(a, b, contact)
-    local user_a = a:getUserData()
-    local user_b = b:getUserData()
-    if a:getCategory() == 6 then
-        user_a:hitboxExitHit(user_b)
-    else
+    if a:getCategory() ~= 6 and b:getCategory() ~= 6 then
+        local user_a, user_b = a:getUserData(), b:getUserData()
         user_a:exitHit(user_b)
-    end
-    if b:getCategory() == 6 then
-        user_b:hitboxExitHit(user_a)
-    else
         user_b:exitHit(user_a)
     end
 end

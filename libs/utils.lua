@@ -52,10 +52,10 @@ end
 
 -- Data manipulation ----------------------------------------------------
 
-function getTable(string_)
+function getTable(string_, sep)
 	local words = {}
-    for word in string.gmatch(string_, "([^%s]+)") do
-        table.insert(words, word)
+    for word in string.gmatch(string_, sep or "([^%s]+)") do
+        table.insert(words, tonumber(word) or word)
     end
     return words
 end

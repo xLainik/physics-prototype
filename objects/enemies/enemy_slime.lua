@@ -3,11 +3,6 @@ Enemy.__index = Enemy
 
 local function newEnemy(x, y, z)
     local self = setmetatable({}, Enemy)
-
-    --Position of the circle center
-    self.x = x or 50
-    self.y = y or 50
-    self.z = z or 50
     
     self.radius = 7.5
 
@@ -25,8 +20,8 @@ local function newEnemy(x, y, z)
     self.bottom_floor = -1000
 
     self.depth = 24
-    self.top = self.z + self.depth/2
-    self.bottom = self.z - self.depth/2
+    self.top = self.depth/2
+    self.bottom = -self.depth/2
 
     self.z_flat_offset = 8
 
@@ -48,8 +43,8 @@ local function newEnemy(x, y, z)
 
     self.userData = {
         id = "enemy",
-        position = {self.x, self.y},
-        spawn_position = {x, y},
+        position = {x,y,z},
+        spawn_position = {x,y,z},
         stamina = 0,
         hp = 10,
         max_hp = 10,
@@ -103,7 +98,7 @@ local function newEnemy(x, y, z)
     self.tree:setBranch(self.isAlive_branch)
 
     --Physics
-    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD, self.userData.position[1], self.userData.position[2], "dynamic")
     self.body:setFixedRotation(true)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape, 0.5)
@@ -128,6 +123,7 @@ local function newEnemy(x, y, z)
 
     -- Shadow
     self.shadow = newShadow(self)
+    self:updateShadow()
     self:setHeight()
 
     -- Animations
@@ -248,9 +244,9 @@ function Enemy:stun_inizializeFunction()
     self.body:setLinearDamping(10)
     self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
 
-    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
-    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
-    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.userData.position[1], self.userData.position[2], self.userData.position[3], 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.userData.position[1], self.userData.position[2], self.userData.position[3], 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
+    table.insert(SPAWNQUEUE, {group = "Particle_Damage", args = {self.userData.position[1], self.userData.position[2], self.userData.position[3], 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
 end
 
 function Enemy:stun_updateFunction(dt)
@@ -413,41 +409,38 @@ end
 
 function Enemy:update(dt)
 
-    -- Behavior tree update
-    self:updateUserData()
-
     -- Apply gravity
     if self.dz > self.max_falling then
         self.dz = self.dz + self.z_gravity
     end
 
     -- Check top and bottom floor, and then apply z velocity
-    local new_z = self.z + self.dz*dt
+    local new_z = self.userData.position[3] + self.dz*dt
     if self.dz > 0 and new_z + self.depth/2 < self.top_floor then
-        self.z = new_z
+        self.userData.position[3] = new_z
     elseif self.dz < 0 then
         if new_z - self.depth/2 > self.bottom_floor then
-            self.z = new_z
+            self.userData.position[3] = new_z
         else
-            self.z = self.bottom_floor + self.depth/2 + 0.01
+            self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
         end
     end
 
-    self.x, self.y = self.body:getX(), self.body:getY()
+    self.userData.position[1], self.userData.position[2] = self.body:getX(), self.body:getY()
 
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.height_flat/2 - self.z_flat_offset)*(0.8125)
     self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
 
-    self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    self.model:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
 
     --Shadow
-    self.shadow:updatePosition(self.x, self.y, self.z)
+    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
     self:updateShadow()
 
     -- Raycast
     --self.Ray.hitList = {}
-    --self.Ray.x1, self.Ray.y1 = self.x, self.y
-    --self.Ray.x2, self.Ray.y2 = self.x - 400, self.y
+    --self.Ray.x1, self.Ray.y1 = self.userData.position[1], self.userData.position[2]
+    --self.Ray.x2, self.Ray.y2 = self.x - 400, self.userData.position[2]
     
     -- Cast the ray and populate the hitList table.
     --WORLD:rayCast(self.Ray.x1, self.Ray.y1, self.Ray.x2, self.Ray.y2, function(fixture, x, y, xn, yn, fraction) self:worldRayCastCallback(fixture, x, y, xn, yn, fraction) return 1 end)
@@ -478,12 +471,8 @@ function Enemy:update(dt)
 
     self:getAnimationAngle()
 
-    self.sprite:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y + self.y_sprite_offset, self.z/SCALE3D.z + self.z_sprite_offset)
+    self.sprite:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y + self.y_sprite_offset, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset)
     
-end
-
-function Enemy:updateUserData()
-    self.userData.position = {self.x, self.y}
 end
 
 function Enemy:resetTree()
@@ -529,7 +518,7 @@ function Enemy:debugDraw()
 end
 
 function Enemy:screenDrawUI()
-    local x, y = main_camera:pointOnScreen(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    local x, y = main_camera:pointOnScreen(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
     local size = 1.2*self.userData.max_hp
     local x2, y2 = x - size/2*WINDOWSCALE, y - (20)*WINDOWSCALE
     love.graphics.setLineWidth(1*WINDOWSCALE)
@@ -547,10 +536,6 @@ end
 function Enemy:destroyMe()
     table.insert(current_map.DELETEQUEUE, {group = "Enemy", index = getIndex(current_scene.enemies, self)})
     self.body:destroy()
-end
-
-function Enemy:setPosition(x, y)
-    self.body:setPosition(x, y)
 end
 
 function Enemy:setAnimation(name, angle, flip_x, flip_y)
@@ -583,9 +568,9 @@ function Enemy:getAnimationAngle()
 end
 
 function Enemy:setHeight()
-    self.top = self.z + self.depth/2
-    self.bottom = self.z - self.depth/2
-    local mask = {11,12,13,14}
+    self.top = self.userData.position[3] + self.depth/2
+    self.bottom = self.userData.position[3] - self.depth/2
+    local mask = {11,12,13,14,15,16}
 
     for i, coll_cat in ipairs(mask) do
         local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
@@ -628,9 +613,9 @@ function Enemy:takeDamage(amount)
         self.body:applyLinearImpulse(scaleVector(self.steering[1], self.steering[2], 10))
     end
 
-    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
-    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
-    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.x, self.y, self.z, 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
+    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.userData.position[1], self.userData.position[2], self.userData.position[3], 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])}})
+    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.userData.position[1], self.userData.position[2], self.userData.position[3], 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])+0.4}})
+    table.insert(current_map.SPAWNQUEUE, {group = "Particle_Damage", args = {self.userData.position[1], self.userData.position[2], self.userData.position[3], 0, 0, getAngle(0, 0, self.steering[1], self.steering[2])-0.4}})
 end
 
 function Enemy:hitboxIsHit(entity)

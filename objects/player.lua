@@ -235,19 +235,14 @@ function Player:control_updateFunction(dt)
 
     -- Mouse Input
     if self.cursor:click() then
-        --print("PLAYER POS: ", self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
-        --print("SPRITE POS: ", self.sprite.imesh.translation[1], self.sprite.imesh.translation[2], self.sprite.imesh.translation[3])
-        --print("CURSOR POS: ", self.cursor.x, self.cursor.y, self.cursor.z)
-        -- dx, dy = 0, 0
-        -- if speed ~= 0 then
-        --     dx, dy = self.body:getLinearVelocity()
-        --     dx, dy = dx, dy
-        -- end
-        local angle = -1*(getAngle(self.userData.position[1]/SCALE3D.x, (self.userData.position[2]-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
-        --print("ANGLE: ", tostring(getAngle(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
-        local spawn_point = {self.userData.position[1] + math.cos(angle)*(16 + 16*math.abs(math.sin(angle))), (self.userData.position[2] - self.z_flat_offset) + math.sin(angle)*(16 + 16*math.abs(math.sin(angle)))}
-        table.insert(current_map.SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.userData.position[3], dx, dy, angle, {player_damage = 2}} })
-        table.insert(current_map.SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.userData.position[3], 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
+        if self.on_ground == true then
+            -- Shoot simple projectile ONLY when on the ground
+            local angle = -1*(getAngle(self.userData.position[1]/SCALE3D.x, (self.userData.position[2]-self.z_flat_offset)/SCALE3D.y, self.cursor.x, self.cursor.y - self.cursor.z_offset/16) + math.random(-self.stats["accuracy"], self.stats["accuracy"])/1000)        
+            --print("ANGLE: ", tostring(getAngle(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.cursor.model.translation[1], self.cursor.model.translation[2])*180/math.pi))
+            local spawn_point = {self.userData.position[1] + math.cos(angle)*(16), (self.userData.position[2] - self.z_flat_offset) + math.sin(angle)*(20)}
+            table.insert(current_map.SPAWNQUEUE, {group = "Projectile_Simple", args = {spawn_point[1], spawn_point[2], self.userData.position[3], dx, dy, angle, {player_damage = 2}} })
+            table.insert(current_map.SPAWNQUEUE, {group = "Particle_Circle", args = {spawn_point[1], spawn_point[2], self.userData.position[3], 0, 0, 0, {style = "line", color = {255/255,121/255,23/255,1}}}})
+        end
     end
 
     if self.userData.control == true then
@@ -382,13 +377,13 @@ end
 
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        --self.shadow:draw(myShader, camera, shadow_map)
+        --self.shadow:draw(shader, camera, shadow_map)
         self.sprite_1:draw(shader, camera, shadow_map)
         self.sprite_2:draw(shader, camera, shadow_map)
     else
         self.sprite_1:draw(shader, camera, shadow_map)
         self.sprite_2:draw(shader, camera, shadow_map)
-        --self.model:draw(myShader, camera, shadow_map)
+        --self.model:draw(shader, camera, shadow_map)
     end
     
 end
@@ -448,7 +443,7 @@ end
 function Player:setHeight()
     self.top = self.userData.position[3] + self.depth/2
     self.bottom = self.userData.position[3] - self.depth/2
-    local mask = {11,12,13,14}
+    local mask = {11,12,13,14,15,16}
 
     for i, coll_cat in ipairs(mask) do
         local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
@@ -469,6 +464,15 @@ function Player:setHeight()
     self.fixture:setMask(1,2,3,4,5,6,7,8,9, unpack(mask))
     self.fixture:setUserData(self)
 
+    -- self.z_flat_offset = self.userData.position[3] - self.depth
+    -- local x, y = self.width_flat/2, self.height_flat/2 
+    -- self.fixture_flat:destroy()
+    -- self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_flat_offset, x, -y -self.z_flat_offset, -x, y -self.z_flat_offset, x, y -self.z_flat_offset)
+    -- self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat)
+
+    -- self.fixture_flat:setSensor(true)
+    -- self.fixture_flat:setCategory(6)
+
     self.fixture_flat:setMask(1,2,3,4,5,8,9, unpack(mask))
     self.fixture_flat:setUserData(self)
 end
@@ -482,9 +486,9 @@ end
 
 function Player:hitboxIsHit(entity)
     --print("Player Hitbox is hit: ", entity.fixture:getCategory())
-    if entity.userData ~= nil then
-        if entity.userData.enemy_damage ~= nil and entity.userData.enemy_damage > 0 then
-            if self.userData.vulnerable == true then
+    if self.userData.vulnerable == true then
+        if entity.userData ~= nil then
+            if entity.userData.enemy_damage ~= nil and entity.userData.enemy_damage > 0 then
                 self.userData.hp = self.userData.hp - entity.userData.enemy_damage
                 self.userData.vulnerable = false
                 if self.userData.hp <= 0 then

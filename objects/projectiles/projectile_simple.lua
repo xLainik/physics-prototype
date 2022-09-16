@@ -22,7 +22,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
 
     -- Set projectile type
     self.radius = 4
-    self.speed = 140
+    self.speed = 200
     self.z_offset = 3 + self.depth/2
     self.inactive_timer = 0
 
@@ -158,7 +158,7 @@ function Projectile:destroyMe()
 end
 
 function Projectile:setHeight()
-    local mask = {11,12,13,14}
+    local mask = {11,12,13,14,15,16}
 
     for i, coll_cat in ipairs(mask) do
         local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
