@@ -1,7 +1,7 @@
 local Door = {}
 Door.__index = Door
 
-local function newDoor(x, y, z, width, height, depth, model, index, connected_to)
+local function newDoor(x, y, z, width, height, depth, model, index, connected_to, direction)
     local self = setmetatable({}, Door)
     -- An object that connects different sections of the current map
 
@@ -9,6 +9,8 @@ local function newDoor(x, y, z, width, height, depth, model, index, connected_to
 
     -- Format: {section_index, door_index}
     self.connected_to = connected_to
+
+    self.direction = direction
 
     -- Scale
     self.width = width*SCALE3D.x

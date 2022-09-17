@@ -22,9 +22,8 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
 
     -- Set projectile type
     self.radius = 4
-    self.speed = 200
+    self.speed = 100
     self.z_offset = 3 + self.depth/2
-    self.inactive_timer = 0
 
     self.userData.player_damage = options["player_damage"] or 0
     self.userData.enemy_damage = options["enemy_damage"] or 0
@@ -47,8 +46,6 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.shape = love.physics.newCircleShape(self.radius)
     self.fixture = love.physics.newFixture(self.body, self.shape)
     self.body:setMass(0)
-
-    self.body:setActive(false)
 
     -- Fixture Category and Mask
 
@@ -85,9 +82,9 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.scale = {16/16, 0, (16/16)/math.cos(0.927295218)}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    local instance_index = current_scene.projectile_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
+    local instance_index = current_section.projectile_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
     self.index = instance_index
-    current_scene.projectiles[instance_index] = self
+    current_section.projectiles[instance_index] = self
 
     -- Shadow
     self.shadow = newShadow(self)
@@ -106,10 +103,6 @@ function Projectile:update(dt)
 
     self.timer = self.timer + dt
 
-    if self.timer > self.inactive_timer then
-        self.body:setActive(true)
-    end
-
     if self.timer > self.max_timer then
         self.active = false
     end
@@ -118,7 +111,7 @@ function Projectile:update(dt)
     self.position = {self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    current_scene.projectile_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
+    current_section.projectile_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
 
     --Shadow
     self.shadow:updatePosition(self.x, self.y, self.z)
@@ -147,9 +140,9 @@ function Projectile:draw(shader, camera, shadow_map)
 end
 
 function Projectile:destroyMe()
-    local last_index = current_scene.projectile_imesh:removeInstance(self.index)
-    local last_obj = current_scene.projectiles[last_index]
-    current_scene.projectiles[self.index] = last_obj
+    local last_index = current_section.projectile_imesh:removeInstance(self.index)
+    local last_obj = current_section.projectiles[last_index]
+    current_section.projectiles[self.index] = last_obj
     last_obj.index = self.index
 
     table.insert(current_map.DELETEQUEUE, {group = "Projectile", index = last_index})

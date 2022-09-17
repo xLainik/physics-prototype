@@ -412,10 +412,6 @@ function Player:screenDrawUI()
     love.graphics.print("HP: "..tostring(self.userData.hp).."/100", (8+54)*WINDOWSCALE, (SCREENHEIGHT-58)*WINDOWSCALE)
 end
 
-function Player:setPosition(x, y)
-    self.body:setPosition(x, y)
-end
-
 function Player:setAnimation(name, angle, flip_x, flip_y)
     local anim = self.animations[name]
     self.sprite_1:changeAnimation(anim["torso"][angle], flip_x, flip_y)

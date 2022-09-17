@@ -41,6 +41,22 @@ function GameWorld:onEnter()
 
     current_camera = main_camera
 
+    -- Light camera for shadow mapping
+    shadow_buffer_canvas = love.graphics.newCanvas(SCREENWIDTH*1.50, SCREENWIDTH*1.50, {format="depth24", readable=true})
+    shadow_buffer_canvas:setFilter("nearest","nearest")
+
+    light_camera = g3d.newCamera(shadow_buffer_canvas:getWidth()/shadow_buffer_canvas:getHeight())
+
+    -- All shaders
+    local dirLightShader_code = love.filesystem.read(GAME.shaders_directory.."/dir_light.glsl")
+    dirLightShader = love.graphics.newShader(dirLightShader_code)
+
+    local depthMapShader_code = love.filesystem.read("assets/shaders/depth_map.glsl")
+    depthMapShader = love.graphics.newShader(depthMapShader_code)
+
+    local billboardShader_code = love.filesystem.read("assets/shaders/billboard.glsl")
+    billboardShader = love.graphics.newShader(billboardShader_code)
+
     -- Load basic objects
     newInstancedMesh = require("libs/instanced_mesh")   
     newShadow = require("objects/shadow")
@@ -54,6 +70,14 @@ function GameWorld:onEnter()
 
     -- Load Map
     current_map = Map:new(self.data["current_map"])
+    current_map:loadSections()
+
+    -- Deactivate all bodies in the whole map
+    for _, section in pairs(current_map.SECTIONS) do
+        for _, AABB in pairs(section.bounding_boxes) do
+            AABB:deactivateBodies()
+        end
+    end
 
     -- Load Player and Circle (Entities that are always loaded)
     local newPlayer = require("objects/player")
@@ -66,7 +90,7 @@ function GameWorld:onEnter()
     player_1:loadData({hp = 100, position = {80, 70, 100}})
 
     -- Load Section
-    current_map:enterSection(1)
+    --current_map:enterSection(1)
 
     --self:saveData()
 
@@ -74,6 +98,8 @@ function GameWorld:onEnter()
     view = {"final_view", "hitbox_debug", "3d_debug"}
     view_index = 1
     view_timer = 0.1
+
+    current_map.enterSection(current_map, 1, nil)
 
 end
 

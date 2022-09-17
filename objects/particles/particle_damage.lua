@@ -41,9 +41,9 @@ local function newParticle(x, y, z, entity_dx, entity_dy, ini_angle)
     self.scale = {16/16, 0, (16/16)}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    local instance_index = current_scene.particle_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
+    local instance_index = current_section.particle_imesh:addInstance(self.matrix, self.uvs[1], self.uvs[2], self.uvs[3])
     self.index = instance_index
-    current_scene.particles[instance_index] = self
+    current_section.particles[instance_index] = self
 
     -- Drawing offsets
     self.y_sprite_offset = -0.3
@@ -77,7 +77,7 @@ function Particle:update(dt)
     self.position = {self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y + self.y_sprite_offset, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
-    current_scene.particle_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
+    current_section.particle_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
 
     if self.active == false then
         self:destroyMe()
@@ -102,9 +102,9 @@ function Particle:draw(shader, camera, shadow_map)
 end
 
 function Particle:destroyMe()
-    local last_index = current_scene.particle_imesh:removeInstance(self.index)
-    local last_obj = current_scene.particles[last_index]
-    current_scene.particles[self.index] = last_obj
+    local last_index = current_section.particle_imesh:removeInstance(self.index)
+    local last_obj = current_section.particles[last_index]
+    current_section.particles[self.index] = last_obj
     last_obj.index = self.index
 
     table.insert(current_map.DELETEQUEUE, {group = "Particle", index = last_index})

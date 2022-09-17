@@ -7,12 +7,6 @@ function Map:new(index)
     -- Index to know which map it is, and what to load on memory
     self.index = index
 
-    -- All scenes that can be loaded
-    local Scene_1 = require("maps/scenes/scene_1")
-
-    self.SCENES = {}
-    self.SCENES["Scene_1"] = Scene_1:new()
-
     --love:physics init
     self.WORLD = love.physics.newWorld(0, 0, true)
     self.WORLD:setCallbacks(beginContact, endContact, preSolve, postSolve)
@@ -63,13 +57,53 @@ function Map:new(index)
     self.SPAWNQUEUE = {}
     self.DELETEQUEUE = {}
 
+    -- Sections
+    self.SECTIONS = {}
+
+    -- All scenes that can be loaded
+    local Scene_1 = require("maps/scenes/scene_1")
+
+    self.SCENES = {}
+    self.SCENES["Scene_1"] = Scene_1:new()
+
     return self
 end
 
+
+function Map:loadSections()
+    -- Create all section objects that the map has and save them in memory
+    local map_directory = GAME.maps_directory.."/"..tostring(self.index)
+    local sections_directory = map_directory.."/sections"
+
+    local files = love.filesystem.getDirectoryItems(sections_directory)
+    for _, file_name in ipairs(files) do
+        local scene_index = nil
+        local section_index = tonumber(file_name)
+        for line in love.filesystem.lines(sections_directory.."/"..file_name.."/data.dat") do
+            local words = getTable(line)
+            local object_name = words[1]
+            table.remove(words, 1)
+            if object_name == "Scene" then
+                scene_index = tonumber(words[1])
+            end
+        end
+        local Section = require("maps/section")
+        local section_object = Section:new(self.index, section_index, scene_index)
+        -- TODO: Section buffer for better use of memory, instead of having all map's sections loaded at ones
+        section_object:loadSection()
+        self.SECTIONS[section_index] = section_object
+    end
+end
+
 function Map.enterSection(self, section_index, door_index)
-    current_scene = self.SCENES["Scene_1"]
-    -- Set all bodies inactives
-    current_scene:onEnter(self.index, section_index, door_index)
+    local previous_section = current_section
+    if previous_section ~= nil then
+        previous_section:exitSection()
+    end
+    current_section = self.SECTIONS[section_index]
+    current_scene = self.SCENES["Scene_"..tostring(current_section.scene_index)]
+    current_section:enterSection(door_index)
+    player_1.body:setActive(true)
 end
 
 function Map:update(dt)
@@ -93,6 +127,8 @@ function Map:update(dt)
     GAME.cursor:updateCoords(current_camera.target[1], current_camera.target[2], player_1.userData.position[3])
     circle_1:update(dt)
 
+    current_section:update(dt)
+
     current_scene:update(dt)
 
     --Spawn the stuff from SPAWNQUEUE
@@ -106,23 +142,23 @@ function Map:update(dt)
     end
 
     -- Projectiles update from current Scene
-    for i = 1, current_scene.projectile_imesh.instanced_count, 1 do
-        current_scene.projectiles[i]:update(dt)
+    for i = 1, current_section.projectile_imesh.instanced_count, 1 do
+        current_section.projectiles[i]:update(dt)
     end
 
     -- Particles update from current Scene
-    for i = 1, current_scene.particle_imesh.instanced_count, 1 do
-        current_scene.particles[i]:update(dt)
+    for i = 1, current_section.particle_imesh.instanced_count, 1 do
+        current_section.particles[i]:update(dt)
     end
 
     --Delete the stuff from DELETEQUEUE
     for i, delete in pairs(self.DELETEQUEUE) do
         if delete["group"] == "Projectile" then
-            current_scene.projectiles[delete["index"]] = "empty"
+            current_section.projectiles[delete["index"]] = "empty"
         elseif delete["group"] == "Enemy" then
-            table.remove(current_scene.enemies, delete["index"])
+            table.remove(current_section.enemies, delete["index"])
         elseif delete["group"] == "Particle" then
-            current_scene.particles[delete["index"]] = "empty"
+            current_section.particles[delete["index"]] = "empty"
         end
     end
 
