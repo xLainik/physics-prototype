@@ -16,10 +16,26 @@ for group in bpy.data.groups:
         if group_type == "Collisions":
             for obj in group.objects:
                 print("Collecting ", obj.name)
-                #for vert in obj.data.vertices:
-                #    print(vert.co.x, vert.co.y, vert.co.z)
-                new_box = "Box" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z)
-                collisions.append(new_box)
+                total_verts = len(obj.data.vertices)
+                if total_verts == 8:
+                    new_box = "Box" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z)
+                    collisions.append(new_box)
+                elif total_verts == 6:
+                    top_verts = []
+                    down_verts = []
+                    for vert in obj.data.vertices:
+                        # print(vert.co.x, vert.co.y, vert.co.z)
+                        if vert.co.z == 0:
+                            down_verts.append([vert.co.x, vert.co.y, vert.co.z])
+                        elif vert.co.z == 2:
+                            top_verts.append([vert.co.x, vert.co.y, vert.co.z])
+                    if len(top_verts) == len(down_verts):
+                        print("Prism")
+                    else:
+                        print("Ramp")
+                        new_ramp = "Ramp" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z)
+                        collisions.append(new_ramp)
+
         elif group_type == "Doors":
             for obj in group.objects:
                 print("Collecting ", obj.name)

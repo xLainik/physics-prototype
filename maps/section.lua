@@ -61,12 +61,31 @@ function Section:loadSection()
             -- Read position and dimension (scale)
             local pos = getFormatedTable(getTable(words[1], "([^,]+)"))
             local dim = getFormatedTable(getTable(words[2], "([^,]+)"))
+            local real_dim = getFormatedTable(getTable(words[2], "([^,]+)"))
+            local texture_path = GAME.models_directory.."/no_texture.png"
+            if pos[3] < 0 then
+                -- Make Barriers very tall so player can't jumpt over them
+                real_dim[3] = 1000
+                pos[3] = -500
+                texture_path = GAME.models_directory.."/red_texture.png"
+            end
             -- Spawn a Box collision shape
-            local model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_cube.obj", false, true), GAME.models_directory.."/no_texture.png", pos, {0,0,0}, dim)
-            local coll_category = 11 + pos[3]
-            local shape = current_map.SPAWNFUNCTIONS["Box"](pos[1], pos[2], pos[3], dim[1], dim[2], dim[3], model, coll_category)
+            local model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_cube.obj", false, true), texture_path, pos, {0,0,0}, dim)
+            local shape = current_map.SPAWNFUNCTIONS["Box"](pos[1], pos[2], pos[3], real_dim[1], real_dim[2], real_dim[3], model)
 
             table.insert(self.collisions, shape)
+        elseif object_name == "Ramp" then
+            -- Read position and dimension (scale)
+            local pos = getFormatedTable(getTable(words[1], "([^,]+)"))
+            local dim = getFormatedTable(getTable(words[2], "([^,]+)"))
+            local real_dim = getFormatedTable(getTable(words[2], "([^,]+)"))
+            local texture_path = GAME.models_directory.."/no_texture.png"
+            -- Spawn a Box collision shape
+            local model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_cube.obj", false, true), texture_path, pos, {0,0,0}, dim)
+            local shape = current_map.SPAWNFUNCTIONS["Ramp"](pos[1], pos[2], pos[3], real_dim[1], real_dim[2], real_dim[3], model)
+
+            table.insert(self.collisions, shape)
+
         elseif object_name == "Door" then
             -- Read position, rotation and dimension (scale)
             local pos = getFormatedTable(getTable(words[1], "([^,]+)"))
@@ -82,8 +101,13 @@ function Section:loadSection()
         end
     end
 
-    -- Load entities with their respective data
-    --table.insert(self.enemies, current_map.SPAWNFUNCTIONS["Enemy_Slime"](120, 120, 100))
+    -- -- Load entities with their respective data
+    -- if self.index == 1 then
+    --     table.insert(self.enemies, current_map.SPAWNFUNCTIONS["Enemy_Slime"](120, 120, 100))
+    -- end
+    -- if self.index == 2 then
+    --     table.insert(self.enemies, current_map.SPAWNFUNCTIONS["Enemy_Slime"](180,-120, 100))
+    -- end
     -- Projectiles
     --Particles
 end
@@ -92,6 +116,7 @@ function Section:enterSection(in_door_index)
     if in_door_index ~= nil then
         for _, door in pairs(self.doors) do
             if door.index == in_door_index then
+                -- Realocate the player
                 player_1.body:setPosition(door.userData.position[1]+door.direction[1]*SCALE3D.x, door.userData.position[2]+door.direction[2]*SCALE3D.y)
                 player_1.userData.position = {player_1.body:getX(), player_1.body:getY(), door.userData.position[3] + 10}
             end

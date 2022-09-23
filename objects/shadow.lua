@@ -8,6 +8,8 @@ local function newShadow(entity)
     self.x, self.y, self.z = 0, 0, 0
     self.radius = entity.radius - 1
 
+    self.top = 1000
+    self.bottom = -1000
 
     --Physic object and floor buffer
     self.shape = love.physics.newCircleShape(self.radius)
@@ -18,7 +20,8 @@ local function newShadow(entity)
 
     -- Shadow floor buffer
     --optional: including a permanent floor (in this case z=0)
-    self.floor_buffer = {0}
+    local plane_function = function(x,y) return 0 end
+    self.floor_buffer = {{0, plane_function, plane_function}}
 
 
     -- 3D Model for shadow casting
@@ -59,14 +62,16 @@ end
 function Shadow:gotHit(entity)
     --print("Shadow got hit")
     if entity.userData ~= nil and entity.userData.collision == true then
-        table.insert(self.floor_buffer, entity.top)
-        table.sort(self.floor_buffer)
+        table.insert(self.floor_buffer, {entity.z, entity:getTopFunction(), entity:getBottomFunction()})
+        -- Sort by z value
+        table.sort(self.floor_buffer, function(a, b) return a[1] < b[1] end)
     end
 end
 function Shadow:exitHit(entity)
     --print("Shadow exited a collision")
     for i, floor in ipairs(self.floor_buffer) do
-        if floor == entity.top then
+        local eval_floor = floor[2](self.x, self.y)
+        if eval_floor == entity.top then
             table.remove(self.floor_buffer, i)
             break
         end

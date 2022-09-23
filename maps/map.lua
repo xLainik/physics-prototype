@@ -11,27 +11,25 @@ function Map:new(index)
     self.WORLD = love.physics.newWorld(0, 0, true)
     self.WORLD:setCallbacks(beginContact, endContact, preSolve, postSolve)
 
+    self.WORLD_coll_hash = {}
+    -- Format 
+
     -- Fixture Category and Mask
     --1 -> Everything else
     --2 -> Player 
-    --3 -> Enemies 1
-    --4 -> Enemies 2
-    --5 -> NPCs
+    --3 -> Enemies
+    --4 -> Projectiles
+    --5 -> 
     --6 -> Entities Hitboxes 1
     --7 -> Entities Hitboxes 2
     --8 -> 
     --9 -> 
-    --10 -> Unbreakable terrain (Floor 0 - Barriers)
-    --11 -> Unbreakable terrain (Floor 1)
-    --12 -> Unbreakable terrain (Floor 2)
-    --13 -> Unbreakable terrain (Floor 3)
-    --14 -> Unbreakable terrain (Floor 4)
-    --15 -> Unbreakable terrain (Floor 5)
-    --16 -> Unbreakable terrain (Floor 6)
+    --10 -> Collisions
+    --11 -> Ramps
 
     -- Objects scripts ----------------------------------    
     local newBox = require(GAME.objects_directory.."/box")
-    local newPolygon = require(GAME.objects_directory.."/polygon")
+    local newRamp = require(GAME.objects_directory.."/ramp")
     local newDoor = require(GAME.maps_directory.."/door")
 
     local newPlayer = require(GAME.objects_directory.."/player")
@@ -46,6 +44,7 @@ function Map:new(index)
     self.SPAWNFUNCTIONS["Player"] = newPlayer
     self.SPAWNFUNCTIONS["Circle"] = newCircle
     self.SPAWNFUNCTIONS["Box"] = newBox
+    self.SPAWNFUNCTIONS["Ramp"] = newRamp
     self.SPAWNFUNCTIONS["Door"] = newDoor
     self.SPAWNFUNCTIONS["Enemy_Slime"] = newEnemy_Slime
     self.SPAWNFUNCTIONS["Projectile_Simple"] = newProjectile_Simple
@@ -104,6 +103,16 @@ function Map.enterSection(self, section_index, door_index)
     current_scene = self.SCENES["Scene_"..tostring(current_section.scene_index)]
     current_section:enterSection(door_index)
     player_1.body:setActive(true)
+    for _, enemy in pairs(current_section.enemies) do
+        enemy.userData.position[3] = enemy.userData.position[3] + 10
+        enemy:setHeight()
+        enemy.shadow:updatePosition(enemy.userData.position[1], enemy.userData.position[2], enemy.userData.position[3])
+        enemy:updateShadow()
+        enemy.body:setActive(true)
+    end
+    for _, door in pairs(current_section.doors) do
+        door.body:setActive(true)
+    end
 end
 
 function Map:update(dt)
@@ -115,7 +124,9 @@ function Map:update(dt)
         if cont:isTouching() == true then
             local a, b = cont:getFixtures()
             if a:getCategory() == 6 and b:getCategory() == 6 then
+                -- Both fixtures are hitboxes
                 local user_a, user_b = a:getUserData(), b:getUserData()
+                --print(user_a.userData.id, a:getCategory(), user_b.userData.id, b:getCategory())
                 user_a:hitboxIsHit(user_b)
                 user_b:hitboxIsHit(user_a)
             end
@@ -188,6 +199,19 @@ function endContact(a, b, contact)
         local user_a, user_b = a:getUserData(), b:getUserData()
         user_a:exitHit(user_b)
         user_b:exitHit(user_a)
+    end
+end
+
+function preSolve(a, b, contact)
+    local user_a, user_b = a:getUserData(), b:getUserData()
+    if a:getCategory() ~= 6 and b:getCategory() ~= 6 then
+        local overlap = math.min(user_a.top, user_b.top) - math.max(user_a.bottom, user_b.bottom)
+        if overlap <= 0 then
+            -- The prisms are NOT overlapping in the z axis, so collision must not occur
+            contact:setEnabled(false)
+        else
+            contact:setEnabled(true)
+        end
     end
 end
 

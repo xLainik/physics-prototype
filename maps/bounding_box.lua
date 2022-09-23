@@ -21,7 +21,9 @@ function BoundingBox:activateBodies()
     current_map.WORLD:queryBoundingBox( self.x1, self.y1, self.x2, self.y2, self.queryCallback)
     for _, body in pairs(self.queryBodies) do
         if body:isDestroyed() == false then
-            body:setActive(true)
+            if body:getType() == "static" then
+                body:setActive(true)
+            end
         end
     end
     self.queryResult = {}

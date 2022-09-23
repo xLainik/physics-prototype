@@ -33,9 +33,9 @@ local function newPlayer(cursor)
     self.space_up_factor = 20
 
     -- Coyote jump and jump buffering
-    self.coyote_time = 0.1
+    self.coyote_time = 0.06
     self.coyote_time_counter = 0
-    self.jump_buffer_time = 0.1
+    self.jump_buffer_time = 0.02
     self.jump_buffer_time_counter = 0
 
     -- UserData
@@ -102,6 +102,14 @@ local function newPlayer(cursor)
     self.fixture_flat:setSensor(true)
 
     self.fixture_flat:setCategory(6)
+
+    self.fixture:setMask(1,2,3,4,5,6,7,8,9)
+
+    self:setHeight()
+
+    self.fixture:setUserData(self)
+
+    self.fixture_flat:setUserData(self)
 
     -- Shadow
     self.shadow = newShadow(self)
@@ -220,10 +228,8 @@ function Player:control_updateFunction(dt)
     -- -- Flying mode
     -- if GAME.actions["action_1"] then
     --     self.userData.position[3] = self.userData.position[3] + 200*dt
-    --     self:setHeight()
     -- elseif GAME.actions["shift"] then
     --     self.userData.position[3] = self.userData.position[3] - 50*dt
-    --     self:setHeight()
     -- end
 
     -- Jump Input
@@ -271,11 +277,12 @@ function Player:loadData(user_data)
     for name, element in pairs(user_data) do
         self.userData[name] = element
     end
-    self:setHeight()
     self.body:setPosition(self.userData.position[1], self.userData.position[2])
 end
 
 function Player:update(dt)
+
+    --print(self.userData.position[1], self.userData.position[2], self.userData.position[3])
 
     self.tree:update(dt)
 
@@ -307,9 +314,7 @@ function Player:update(dt)
     --self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_flat_offset - self.height_flat/2)*(0.8125)
 
-    --Shadow
-    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
-    self:updateShadow()
+    
     
     --print(unpack(self.shadow.floor_buffer))
     --print(self.on_ground, self.dz)
@@ -321,7 +326,7 @@ function Player:update(dt)
         self.coyote_time_counter = self.coyote_time_counter - dt
     end
 
-    if love.keyboard.isDown("space") then
+    if GAME.actions["action_1"] then
         self.jump_buffer_time_counter = self.jump_buffer_time
     else
         self.jump_buffer_time_counter = self.jump_buffer_time_counter - dt
@@ -332,35 +337,39 @@ function Player:update(dt)
         self.dz = self.jump_max_speed
         self.jump_buffer_time_counter = 0
     end
-    if not(self.on_ground) and not(love.keyboard.isDown("space")) and self.dz > 0 then
+    if not(self.on_ground) and not(GAME.actions["action_1"]) and self.dz > 0 then
         --short jump
         self.dz = self.dz * 0.5
         self.coyote_time_counter = 0
     end
 
     -- Apply gravity
-    if not(self.on_ground) and self.dz > self.max_falling then
+    if self.dz > self.max_falling then
         self.dz = self.dz + self.z_gravity - self.space_up_factor*(1 - self.space_is_down)
     end
 
     -- Check top and bottom floor, and then apply z velocity
-    local new_z = self.userData.position[3] + self.dz*dt
-    if self.dz > 0 and new_z + self.depth/2 < self.top_floor then
-        self.userData.position[3] = new_z
-    elseif self.dz < 0 then
-        if new_z - self.depth/2 > self.bottom_floor then
-            self.userData.position[3] = new_z
-        else
-            self.on_ground = true
-            self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
-        end
+    self.userData.position[3] = self.userData.position[3] + self.dz*dt
+
+    self:setHeight()
+
+    if self.bottom <= self.bottom_floor then
+        self.on_ground = true
+        self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
+    elseif self.top >= self.top_floor then
+        self.userData.position[3] = self.top_floor - self.depth/2 - 0.01
     end
+
+    self:setHeight()
+
+    --Shadow
+    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
+    self:updateShadow()
 
     -- Animation Handleling
     self.sprite_1:update(dt)
     self.sprite_2:update(dt)
-
-    self:setHeight()
+    
     self.model:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
     self.sprite_1:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y - 0.2, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset)
     self.sprite_2:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y - 0.15, self.userData.position[3]/SCALE3D.z + self.z_sprite_offset)
@@ -378,6 +387,7 @@ end
 function Player:draw(shader, camera, shadow_map)
     if shadow_map == true then
         --self.shadow:draw(shader, camera, shadow_map)
+        --self.model:draw(shader, camera, shadow_map)
         self.sprite_1:draw(shader, camera, shadow_map)
         self.sprite_2:draw(shader, camera, shadow_map)
     else
@@ -439,38 +449,6 @@ end
 function Player:setHeight()
     self.top = self.userData.position[3] + self.depth/2
     self.bottom = self.userData.position[3] - self.depth/2
-    local mask = {11,12,13,14,15,16}
-
-    for i, coll_cat in ipairs(mask) do
-        local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
-        if overlap >= 0 then
-            -- the player overlaps the floor range, either from the bottom (or top)
-            table.remove(mask, i)
-            if overlap == self.depth then
-                -- the overlap is the whole player's depth
-                break
-            else
-                -- remove the next floor on top (which now is at index i, not i+1)
-                table.remove(mask, i)
-                break
-            end
-        end
-    end
-    -- category 1 are shadows
-    self.fixture:setMask(1,2,3,4,5,6,7,8,9, unpack(mask))
-    self.fixture:setUserData(self)
-
-    -- self.z_flat_offset = self.userData.position[3] - self.depth
-    -- local x, y = self.width_flat/2, self.height_flat/2 
-    -- self.fixture_flat:destroy()
-    -- self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_flat_offset, x, -y -self.z_flat_offset, -x, y -self.z_flat_offset, x, y -self.z_flat_offset)
-    -- self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat)
-
-    -- self.fixture_flat:setSensor(true)
-    -- self.fixture_flat:setCategory(6)
-
-    self.fixture_flat:setMask(1,2,3,4,5,8,9, unpack(mask))
-    self.fixture_flat:setUserData(self)
 end
 
 function Player:gotHit(entity)
@@ -505,8 +483,8 @@ function Player:updateShadow()
     local bottom_buffer = {}
     for i=#self.shadow.floor_buffer,1,-1 do
         -- read the buffer from top to bottom
-        local floor = self.shadow.floor_buffer[i]
-        local bottom = floor - SCALE3D.z
+        local floor = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
+        local bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
         if floor <= self.bottom then
             self.bottom_floor = floor
             self.top_floor = bottom_buffer[#bottom_buffer] or 1000

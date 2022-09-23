@@ -1,8 +1,8 @@
-local Box = {}
-Box.__index = Box
+local Ramp = {}
+Ramp.__index = Ramp
 
-local function newBox(x, y, z, width, height, depth, model)
-    local self = setmetatable({}, Box)
+local function newRamp(x, y, z, width, height, depth, model)
+    local self = setmetatable({}, Ramp)
 
     -- Position of the xyz center in 3D
     self.x = x + width/2 or 0
@@ -12,11 +12,16 @@ local function newBox(x, y, z, width, height, depth, model)
     self.height = height or 60
     self.depth = depth or 60
 
+    self.origin_x = x*SCALE3D.x
+    self.origin_y = y*SCALE3D.y
+
     self.top = (self.z + self.depth/2)*SCALE3D.z
     self.bottom = (self.z - self.depth/2)*SCALE3D.z
 
     self.top_function = function(x, y)
-        return self.top
+        local rel_x = x - self.origin_x
+        print(rel_x * self.depth/self.width + self.bottom)
+        return rel_x * self.depth/self.width + self.bottom + 1
     end
 
     self.bottom_function = function(x, y)
@@ -32,8 +37,10 @@ local function newBox(x, y, z, width, height, depth, model)
     self.shape = love.physics.newRectangleShape(self.width*SCALE3D.x, self.height*SCALE3D.x)
     self.fixture = love.physics.newFixture(self.body, self.shape)
 
+    self.fixture:setSensor(true)
+
     -- Fixture Category and Mask
-    self.fixture:setCategory(10)
+    self.fixture:setCategory(11)
     self.fixture:setUserData(self)
 
     -- 3D model
@@ -43,34 +50,34 @@ local function newBox(x, y, z, width, height, depth, model)
     return self
 end
 
-function Box:update(dt)
+function Ramp:update(dt)
     --pass
 end
 
-function Box:draw(shader, camera, shadow_map)
+function Ramp:draw(shader, camera, shadow_map)
     self.model:draw(shader, camera, shadow_map)
 end
 
-function Box:getTopFunction()
+function Ramp:getTopFunction()
     return self.top_function
 end
 
-function Box:getBottomFunction()
+function Ramp:getBottomFunction()
     return self.bottom_function
 end
 
-function Box:gotHit(entity)
-    --print("Box got hit")
+function Ramp:gotHit(entity)
+    --print("Ramp got hit")
 end
-function Box:exitHit(entity)
-    --print("Box exited a collision")
-end
-
-function Box:hitboxGotHit(entity)
-    --print("Box Hitbox got hit: ", entity.fixture:getCategory())
-end
-function Box:hitboxExitHit(entity)
-    --print("Box Hitbox exited a collision")
+function Ramp:exitHit(entity)
+    --print("Ramp exited a collision")
 end
 
-return newBox
+function Ramp:hitRampGotHit(entity)
+    --print("Ramp HitRamp got hit: ", entity.fixture:getCategory())
+end
+function Ramp:hitRampExitHit(entity)
+    --print("Ramp HitRamp exited a collision")
+end
+
+return newRamp

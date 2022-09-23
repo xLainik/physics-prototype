@@ -10,29 +10,31 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.target = target
 
     --Position of the 3D cylinder center
-    self.x = x
-    self.y = y
-    self.z = z
+    
 
     self.angle = ini_angle
 
     self.depth = 10
 
-    self.userData = {}
+    self.userData = {
+        id = "projectile",
+        position = {x, y, z},
+        player_damage = options["player_damage"] or 0,
+        enemy_damage = options["enemy_damage"] or 0,
+        hp = -1
+        }
+
+    self.top = self.userData.position[3] + self.depth/2
+    self.bottom = self.userData.position[3] - self.depth/2
 
     -- Set projectile type
     self.radius = 4
     self.speed = 100
     self.z_offset = 3 + self.depth/2
 
-    self.userData.player_damage = options["player_damage"] or 0
-    self.userData.enemy_damage = options["enemy_damage"] or 0
-
     self.timer = 0
     self.max_timer = 16 - 0.0002*self.speed*self.speed --120 speed = 13 (MAX = 280)
-    
-    self.top = self.z + self.depth/2
-    self.bottom = self.z - self.depth/2
+
 
     self.active = true
 
@@ -40,7 +42,7 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     --self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     --Physics
-    self.body = love.physics.newBody(current_map.WORLD, self.x, self.y, "dynamic")
+    self.body = love.physics.newBody(current_map.WORLD,  self.userData.position[1], self.userData.position[2], "dynamic")
     self.body:setFixedRotation(true)
     self.body:setBullet(true) --slow processing
     self.shape = love.physics.newCircleShape(self.radius)
@@ -61,14 +63,20 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.shape_flat = love.physics.newPolygonShape(-x, -y -self.z_offset, x, -y -self.z_offset, -x, y -self.z_offset, x, y -self.z_offset)
 
     self.fixture_flat = love.physics.newFixture(self.body, self.shape_flat, 0.5)
-    self.fixture:setCategory(1)
+    self.fixture:setCategory(4)
     self.fixture_flat:setCategory(6)
     self.hit_set = {nil, nil, true, true}
 
 
     self.fixture_flat:setSensor(true)
 
-    self:setHeight()
+    self:setHeight2()
+
+    self.fixture:setMask(1,2,3,4,5,6,7,8,9)
+    self.fixture:setUserData(self)
+
+    self.fixture_flat:setMask(1,2,3,4,5,7,8,9)
+    self.fixture_flat:setUserData(self)
 
     --self:setVelocity(self.speed, self.angle)
     --print(entity_dx, entity_dy)
@@ -99,7 +107,7 @@ function Projectile:setVelocity(speed, angle)
 end
 
 function Projectile:update(dt)
-    self.x, self.y = self.body:getX(), self.body:getY()
+    self.userData.position[1], self.userData.position[2] = self.body:getX(), self.body:getY()
 
     self.timer = self.timer + dt
 
@@ -107,14 +115,16 @@ function Projectile:update(dt)
         self.active = false
     end
 
+    self:setHeight2()
+
     -- Instanced Mesh update
-    self.position = {self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z}
+    self.position = {self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
 
     current_section.projectile_imesh:updateInstanceMAT(self.index, self.matrix:getMatrixRows())
 
     --Shadow
-    self.shadow:updatePosition(self.x, self.y, self.z)
+    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
     --self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
 
     if self.active == false then
@@ -150,6 +160,11 @@ function Projectile:destroyMe()
     self.body:destroy()
 end
 
+function Projectile:setHeight2()
+    self.top = self.userData.position[3] + self.depth/2
+    self.bottom = self.userData.position[3] - self.depth/2
+end
+
 function Projectile:setHeight()
     local mask = {11,12,13,14,15,16}
 
@@ -179,7 +194,10 @@ end
 
 function Projectile:gotHit(entity, xn, yn)
     --print("Projectile got hit: ", entity.fixture:getCategory())
-    self.active = false
+    local overlap = math.min(self.top, entity.top) - math.max(self.bottom, entity.bottom)
+    if overlap >= 0 then
+        self.active = false
+    end
 end
 function Projectile:exitHit(entity, xn, yn)
     --print("Projectile exited a collision")

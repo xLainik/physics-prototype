@@ -11,15 +11,17 @@ local function newEnemy(x, y, z)
 
     self.steering = {0, 0}
 
-    self.dz = -8
-    self.z_gravity = -8
-    self.max_falling = -200
-
     -- Variables for jumping
     self.top_floor = 1000
     self.bottom_floor = -1000
+    self.on_ground = false
+
+    self.dz = -8
+    self.z_gravity = -8
+    self.max_falling = -120
 
     self.depth = 24
+    
     self.top = self.depth/2
     self.bottom = -self.depth/2
 
@@ -51,6 +53,8 @@ local function newEnemy(x, y, z)
         stun = false,
         enemy_damage = 0
         }
+
+    self:setHeight()
 
     self.idle_timer = 0
     self.wander_timer = 0
@@ -106,6 +110,9 @@ local function newEnemy(x, y, z)
     -- Fixture Category and Mask
     self.fixture:setCategory(3)
 
+    self.fixture:setMask(1,2,3,4,5,6,7,8,9)
+    self.fixture:setUserData(self)
+
     -- Flat hitbox
     self.width_flat, self.height_flat = 16, 18
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, self.body:getY()*(0.8125) - self.height_flat/2 - self.z_flat_offset
@@ -121,10 +128,13 @@ local function newEnemy(x, y, z)
 
     self.fixture_flat:setCategory(6)
 
+    self.fixture_flat:setMask(1,2,3,4,5,8,9)
+    self.fixture_flat:setUserData(self)
+
     -- Shadow
     self.shadow = newShadow(self)
     self:updateShadow()
-    self:setHeight()
+    
 
     -- Animations
     local sheet = love.graphics.newImage(GAME.sprites_directory.."/sprites/enemy_slime/slime.png")
@@ -409,33 +419,37 @@ end
 
 function Enemy:update(dt)
 
-    -- Apply gravity
+    self.tree:update(dt)
+
+    self.userData.position[1], self.userData.position[2] = self.body:getX(), self.body:getY()
+
+    --- Apply gravity
     if self.dz > self.max_falling then
         self.dz = self.dz + self.z_gravity
     end
 
     -- Check top and bottom floor, and then apply z velocity
-    local new_z = self.userData.position[3] + self.dz*dt
-    if self.dz > 0 and new_z + self.depth/2 < self.top_floor then
-        self.userData.position[3] = new_z
-    elseif self.dz < 0 then
-        if new_z - self.depth/2 > self.bottom_floor then
-            self.userData.position[3] = new_z
-        else
-            self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
-        end
+    self.userData.position[3] = self.userData.position[3] + self.dz*dt
+
+    self:setHeight()
+
+    if self.bottom <= self.bottom_floor then
+        self.on_ground = true
+        self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
+    elseif self.top >= self.top_floor then
+        self.userData.position[3] = self.top_floor - self.depth/2 - 0.01
     end
 
-    self.userData.position[1], self.userData.position[2] = self.body:getX(), self.body:getY()
+    self:setHeight()
+
+    --Shadow
+    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
+    self:updateShadow()
 
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.height_flat/2 - self.z_flat_offset)*(0.8125)
     self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
 
     self.model:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
-
-    --Shadow
-    self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
-    self:updateShadow()
 
     -- Raycast
     --self.Ray.hitList = {}
@@ -448,8 +462,6 @@ function Enemy:update(dt)
     -- for i, hit in ipairs(self.Ray.hitList) do
     --     print(i, hit.x, hit.y, hit.xn, hit.xy, hit.fraction)
     -- end
-
-    self.tree:update(dt)
 
     if self.userData.stun == true then
         self.stun_timer = self.stun_timer + dt
@@ -488,6 +500,7 @@ end
 function Enemy:draw(shader, camera, shadow_map)
     if shadow_map == true then
         --self.shadow:draw(myShader, camera, shadow_map)
+        --self.model:draw(myShader, camera, shadow_map)
         self.sprite:draw(shader, camera, shadow_map)
     else
         self.sprite:draw(shader, camera, shadow_map)
@@ -570,29 +583,6 @@ end
 function Enemy:setHeight()
     self.top = self.userData.position[3] + self.depth/2
     self.bottom = self.userData.position[3] - self.depth/2
-    local mask = {11,12,13,14,15,16}
-
-    for i, coll_cat in ipairs(mask) do
-        local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
-        if overlap >= 0 then
-            -- the player overlaps the floor range, either from the bottom (or top)
-            table.remove(mask, i)
-            if overlap == self.depth then
-                -- the overlap is the whole player's depth
-                break
-            else
-                -- remove the next floor on top (which now is at index i, not i+1)
-                table.remove(mask, i)
-                break
-            end
-        end
-    end
-    -- category 1 are shadows
-    self.fixture:setMask(1,2,3,4,5,6,7,8,9, unpack(mask))
-    self.fixture:setUserData(self)
-
-    self.fixture_flat:setMask(1,2,3,4,5,8,9, unpack(mask))
-    self.fixture_flat:setUserData(self)
 end
 
 function Enemy:gotHit(entity)
@@ -640,8 +630,8 @@ function Enemy:updateShadow()
     local bottom_buffer = {}
     for i=#self.shadow.floor_buffer,1,-1 do
         -- read the buffer from top to bottom
-        local floor = self.shadow.floor_buffer[i]
-        local bottom = floor - SCALE3D.z
+        local floor = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
+        local bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
         if floor <= self.bottom then
             self.bottom_floor = floor
             self.top_floor = bottom_buffer[#bottom_buffer] or 1000
