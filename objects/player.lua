@@ -314,9 +314,12 @@ function Player:update(dt)
     --self.flat_x, self.flat_y = self.body:getX(), self.body:getY()*(0.8125) - self.z_flat_offset
     --self.flat_x, self.flat_y = self.body:getX() - self.width_flat/2, (self.body:getY() - self.z_flat_offset - self.height_flat/2)*(0.8125)
 
-    
-    
-    --print(unpack(self.shadow.floor_buffer))
+    --print(self.top_floor, self.bottom_floor)
+
+    -- for _, shadow in ipairs(self.shadow.floor_buffer) do
+    --     print(shadow[3])
+    -- end
+    -- print(unpack(self.shadow.floor_buffer))
     --print(self.on_ground, self.dz)
 
     -- Jump (coyote time + jump buffer)
@@ -483,14 +486,23 @@ function Player:updateShadow()
     local bottom_buffer = {}
     for i=#self.shadow.floor_buffer,1,-1 do
         -- read the buffer from top to bottom
-        local floor = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
-        local bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
-        if floor <= self.bottom then
-            self.bottom_floor = floor
+        local coll_top = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
+        local coll_bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
+
+        -- if coll_top > self.bottom_floor and coll_bottom < self.top_floor then
+        --     self.bottom_floor = coll_top
+        -- end
+        -- if coll_bottom < self.top_floor then
+        --     self.top_floor = coll_bottom
+        -- end
+
+        if coll_bottom > self.top then
+            table.insert(bottom_buffer, coll_bottom)
+        else
+            self.bottom_floor = coll_top
+            --print(self.bottom_floor)
             self.top_floor = bottom_buffer[#bottom_buffer] or 1000
             break
-        elseif bottom >= self.top then
-            table.insert(bottom_buffer, bottom)
         end
     end
 end

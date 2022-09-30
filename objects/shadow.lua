@@ -71,7 +71,8 @@ function Shadow:exitHit(entity)
     --print("Shadow exited a collision")
     for i, floor in ipairs(self.floor_buffer) do
         local eval_floor = floor[2](self.x, self.y)
-        if eval_floor == entity.top then
+        if floor[2] == entity.top_function and floor[3] == entity.bottom_function then
+            --print("removed")
             table.remove(self.floor_buffer, i)
             break
         end

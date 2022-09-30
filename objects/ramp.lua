@@ -14,14 +14,23 @@ local function newRamp(x, y, z, width, height, depth, model)
 
     self.origin_x = x*SCALE3D.x
     self.origin_y = y*SCALE3D.y
+    self.origin_z = z*SCALE3D.z
 
     self.top = (self.z + self.depth/2)*SCALE3D.z
     self.bottom = (self.z - self.depth/2)*SCALE3D.z
 
     self.top_function = function(x, y)
         local rel_x = x - self.origin_x
-        print(rel_x * self.depth/self.width + self.bottom)
-        return rel_x * self.depth/self.width + self.bottom + 1
+        local rel_y = self.origin_y - y
+        if rel_x >= 0 and rel_x < self.width*SCALE3D.x then
+            return clamp(self.origin_z + rel_x*self.depth/self.width, self.bottom, self.top)
+        end
+        if rel_x < 0 then
+            return self.bottom
+        elseif rel_x >= self.width*SCALE3D.x then
+            return self.top
+        end
+        --return rel_x * self.depth/self.width + self.bottom + 1
     end
 
     self.bottom_function = function(x, y)
@@ -37,7 +46,7 @@ local function newRamp(x, y, z, width, height, depth, model)
     self.shape = love.physics.newRectangleShape(self.width*SCALE3D.x, self.height*SCALE3D.x)
     self.fixture = love.physics.newFixture(self.body, self.shape)
 
-    self.fixture:setSensor(true)
+    --self.fixture:setSensor(true)
 
     -- Fixture Category and Mask
     self.fixture:setCategory(11)
