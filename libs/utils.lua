@@ -13,6 +13,10 @@ function getLenght(x, y)
 	return math.sqrt(x^2 + y^2)
 end
 
+function getLenght_3D(x, y, z)
+	return math.sqrt(x^2 + y^2 + z^2)
+end
+
 function sumVector(x1,y1, x2,y2)
 	return x1+x2, y1+y2
 end
@@ -34,13 +38,38 @@ function dotProduct(x1,y1, x2,y2)
 	return x1*x2 + y1*y2
 end
 
+function crossProduct_3D(a1,a2,a3, b1,b2,b3)
+    return a2*b3 - a3*b2, a3*b1 - a1*b3, a1*b2 - a2*b1
+end
+
+function dotProduct_3D(a1,a2,a3, b1,b2,b3)
+    return a1*b1 + a2*b2 + a3*b3
+end
+
+function normalizeVector_3D(x, y, z)
+	local lenght = getLenght_3D(x, y, z)
+	return x/lenght, y/lenght, z/lenght
+end
+
 function getSign(number)
 	return number > 0 and 1 or (number == 0 and 0 or -1)
+end
+
+function rotatePoint(x1, y1, x2, y2, angle)
+	return math.cos(angle)*(x2-x1) - math.sin(angle)*(y2-y1) + x1, math.sin(angle)*(x2-x1) + math.cos(angle)*(y2-y1) + y1
+end
+
+-- General maths -------------------------------------------------------
+
+function closeNumber(x, y, error)
+	return x < y + error and x > y - error
 end
 
 function clamp(x, min, max)
     return x < min and min or (x > max and max or x)
 end
+
+-- Data manipulation ----------------------------------------------------
 
 function getIndex(table_, element)
 	for index, value in ipairs(table_) do
@@ -49,8 +78,6 @@ function getIndex(table_, element)
        end
     end
 end
-
--- Data manipulation ----------------------------------------------------
 
 function getTable(string_, sep)
 	local words = {}

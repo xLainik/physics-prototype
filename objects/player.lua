@@ -394,9 +394,9 @@ function Player:draw(shader, camera, shadow_map)
         self.sprite_1:draw(shader, camera, shadow_map)
         self.sprite_2:draw(shader, camera, shadow_map)
     else
-        self.sprite_1:draw(shader, camera, shadow_map)
-        self.sprite_2:draw(shader, camera, shadow_map)
-        --self.model:draw(shader, camera, shadow_map)
+        --self.sprite_1:draw(shader, camera, shadow_map)
+        --self.sprite_2:draw(shader, camera, shadow_map)
+        self.model:draw(shader, camera, shadow_map)
     end
     
 end
@@ -488,13 +488,6 @@ function Player:updateShadow()
         -- read the buffer from top to bottom
         local coll_top = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
         local coll_bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
-
-        -- if coll_top > self.bottom_floor and coll_bottom < self.top_floor then
-        --     self.bottom_floor = coll_top
-        -- end
-        -- if coll_bottom < self.top_floor then
-        --     self.top_floor = coll_bottom
-        -- end
 
         if coll_bottom > self.top then
             table.insert(bottom_buffer, coll_bottom)

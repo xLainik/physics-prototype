@@ -1,16 +1,23 @@
 local Ramp = {}
 Ramp.__index = Ramp
 
-local function newRamp(x, y, z, width, height, depth, model)
+local function newRamp(ramp_type, x, y, z, width, height, depth, model)
     local self = setmetatable({}, Ramp)
 
+    local z_rotation = model.rotation[3]
+
     -- Position of the xyz center in 3D
-    self.x = x + width/2 or 0
-    self.y = y + height/2 or 0
+    self.x, self.y  = rotatePoint(x,y, x+width/2,y+height/2, z_rotation)
     self.z = z + depth/2 or 0
+    
     self.width = width or 60
     self.height = height or 60
     self.depth = depth or 60
+
+    if ramp_type == "Diagonal_Ramp" or ramp_type == "Diagonal_Ramp_Inner" then
+        self.diagonal = math.sqrt(math.pow(width, 2) + math.pow(height, 2))
+        self.normal = {normalizeVector_3D(crossProduct_3D(width,0,depth, -width,height,0))}
+    end
 
     self.origin_x = x*SCALE3D.x
     self.origin_y = y*SCALE3D.y
@@ -19,19 +26,78 @@ local function newRamp(x, y, z, width, height, depth, model)
     self.top = (self.z + self.depth/2)*SCALE3D.z
     self.bottom = (self.z - self.depth/2)*SCALE3D.z
 
-    self.top_function = function(x, y)
-        local rel_x = x - self.origin_x
-        local rel_y = self.origin_y - y
-        if rel_x >= 0 and rel_x < self.width*SCALE3D.x then
-            return clamp(self.origin_z + rel_x*self.depth/self.width, self.bottom, self.top)
+    if closeNumber(z_rotation, 0, 0.1) then
+        -- Ramp 1. Left to right
+        self.rel_x = function(x) return x - self.origin_x end
+        if ramp_type == "Diagonal_Ramp" or ramp_type == "Diagonal_Ramp_Inner"then
+            self.rel_x = function(x) return x - self.origin_x end
+            self.rel_y = function(y) return self.origin_y - y end
         end
-        if rel_x < 0 then
-            return self.bottom
-        elseif rel_x >= self.width*SCALE3D.x then
-            return self.top
-        end
-        --return rel_x * self.depth/self.width + self.bottom + 1
     end
+    if closeNumber(z_rotation, math.pi, 0.1) then
+        -- Ramp 2. Right to left
+        self.rel_x = function(x) return self.origin_x - x end
+        if ramp_type == "Diagonal_Ramp" or ramp_type == "Diagonal_Ramp_Inner" then
+            self.rel_x = function(x) return self.origin_x - x end
+            self.rel_y = function(y) return y - self.origin_y end
+        end
+    end
+
+    if closeNumber(z_rotation, 0.5*math.pi, 0.1) then
+        -- Ramp 3. Down to Top
+        self.rel_y = function(y) return self.origin_y - y end
+        if ramp_type == "Diagonal_Ramp" or ramp_type == "Diagonal_Ramp_Inner" then
+            self.rel_x = function(x) return self.origin_x - x end
+            self.rel_y = function(y) return self.origin_y - y end
+        end
+    end
+    if closeNumber(z_rotation, 1.5*math.pi, 0.1) then
+        -- Ramp 4. Top to Down
+        self.rel_y = function(y) return y - self.origin_y end
+        if ramp_type == "Diagonal_Ramp" or ramp_type == "Diagonal_Ramp_Inner" then
+            self.rel_x = function(x) return x - self.origin_x end
+            self.rel_y = function(y) return y - self.origin_y end
+        end
+    end
+
+
+    if closeNumber(z_rotation, 0, 0.1) or closeNumber(z_rotation, math.pi, 0.1) then
+        if ramp_type == "Regular_Ramp" then
+            self.top_function = function(x, y)
+                local rel_x = self.rel_x(x)
+                local intersect = rel_x*self.depth/self.width
+                return clamp(self.origin_z + intersect, self.bottom, self.top)
+            end
+        end
+    end
+
+    
+    if closeNumber(z_rotation, 0.5*math.pi, 0.1) or closeNumber(z_rotation, 1.5*math.pi, 0.1) then
+        if ramp_type == "Regular_Ramp" then
+            self.top_function = function(x, y)
+                local rel_y = self.rel_y(y)
+                local intersect = rel_y*self.depth/self.width
+                return clamp(self.origin_z + intersect, self.bottom, self.top)
+            end
+        end
+    end
+
+    if ramp_type == "Diagonal_Ramp" then
+        self.top_function = function(x, y)
+            local rel_x = self.rel_x(x)
+            local rel_y = self.rel_y(y)
+            local intersect = (self.normal[1]*self.width*SCALE3D.x - self.normal[1]*rel_x - self.normal[2]*rel_y)/self.normal[3]
+            return clamp(self.origin_z + intersect, self.bottom, self.top)
+        end
+    elseif ramp_type == "Diagonal_Ramp_Inner" then
+        self.top_function = function(x, y)
+            local rel_x = self.rel_x(x)
+            local rel_y = self.rel_y(y)
+            local intersect = (self.normal[1]*self.width*SCALE3D.x - self.normal[1]*rel_x - self.normal[2]*rel_y)/self.normal[3]
+            return clamp(self.origin_z + intersect + self.depth*SCALE3D.x, self.bottom, self.top)
+        end
+    end
+
 
     self.bottom_function = function(x, y)
         return self.bottom
@@ -43,7 +109,11 @@ local function newRamp(x, y, z, width, height, depth, model)
 
     --Physics
     self.body = love.physics.newBody(current_map.WORLD, self.x*SCALE3D.x, self.y*SCALE3D.y, "static")
-    self.shape = love.physics.newRectangleShape(self.width*SCALE3D.x, self.height*SCALE3D.x)
+    if closeNumber(z_rotation, 0, 0.1) or closeNumber(z_rotation, math.pi, 0.1) then
+        self.shape = love.physics.newRectangleShape(self.width*SCALE3D.x, self.height*SCALE3D.x)
+    elseif closeNumber(z_rotation, 0.5*math.pi, 0.1) or closeNumber(z_rotation, 1.5*math.pi, 0.1) then
+        self.shape = love.physics.newRectangleShape(self.height*SCALE3D.x, self.width*SCALE3D.x)
+    end
     self.fixture = love.physics.newFixture(self.body, self.shape)
 
     --self.fixture:setSensor(true)

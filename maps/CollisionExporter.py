@@ -20,7 +20,7 @@ for group in bpy.data.groups:
                 if total_verts == 8:
                     new_box = "Box" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z)
                     collisions.append(new_box)
-                elif total_verts == 6:
+                elif total_verts <= 7:
                     top_verts = []
                     down_verts = []
                     for vert in obj.data.vertices:
@@ -29,12 +29,21 @@ for group in bpy.data.groups:
                             down_verts.append([vert.co.x, vert.co.y, vert.co.z])
                         elif vert.co.z == 2:
                             top_verts.append([vert.co.x, vert.co.y, vert.co.z])
+                        print(len(top_verts), len(down_verts))
                     if len(top_verts) == len(down_verts):
                         print("Prism")
-                    else:
-                        print("Ramp")
-                        new_ramp = "Ramp" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z)
+                    elif len(top_verts) == 2 and len(down_verts) == 4:
+                        print("Regular_Ramp")
+                        new_ramp = "Regular_Ramp" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z) + " " + str(obj.rotation_euler.x) + "," + str(obj.rotation_euler.y) + "," + str(obj.rotation_euler.z)
                         collisions.append(new_ramp)
+                    elif len(top_verts) == 1 and len(down_verts) == 3:
+                        print("Diagonal_Ramp")
+                        new_diagonal_ramp = "Diagonal_Ramp" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z) + " " + str(obj.rotation_euler.x) + "," + str(obj.rotation_euler.y) + "," + str(obj.rotation_euler.z)
+                        collisions.append(new_diagonal_ramp)
+                    elif len(top_verts) == 3 and len(down_verts) == 4:
+                        print("Diagonal_Ramp_Inner")
+                        new_diagonal_ramp = "Diagonal_Ramp_Inner" + " " + str(obj.location.x) + "," + str(obj.location.y) + "," + str(obj.location.z) + " " + str(obj.dimensions.x) + "," + str(obj.dimensions.y) + "," + str(obj.dimensions.z) + " " + str(obj.rotation_euler.x) + "," + str(obj.rotation_euler.y) + "," + str(obj.rotation_euler.z)
+                        collisions.append(new_diagonal_ramp)
 
         elif group_type == "Doors":
             for obj in group.objects:

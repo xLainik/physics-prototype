@@ -211,11 +211,11 @@ function preSolve(a, b, contact)
             -- The prisms are NOT overlapping in the z axis, so collision must not occur
             contact:setEnabled(false)
         else
-            -- Dealing with ramps first
+            -- Dealing with collisions
             if cate_a == 10 or cate_a == 11 then
-                contact:setEnabled(user_a.top_function(user_b.userData.position[1], user_b.userData.position[2]) >= user_b.bottom + 10)
+                contact:setEnabled(user_a.top_function(user_b.userData.position[1], user_b.userData.position[2]) >= user_b.bottom + 4)
             elseif cate_b == 10 or cate_b == 11 then
-                contact:setEnabled(user_b.top_function(user_a.userData.position[1], user_a.userData.position[2]) >= user_a.bottom + 10)
+                contact:setEnabled(user_b.top_function(user_a.userData.position[1], user_a.userData.position[2]) >= user_a.bottom + 4)
             end
         end
     end
