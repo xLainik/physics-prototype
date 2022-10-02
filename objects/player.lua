@@ -33,7 +33,7 @@ local function newPlayer(cursor)
     self.space_up_factor = 20
 
     -- Coyote jump and jump buffering
-    self.coyote_time = 0.06
+    self.coyote_time = 0.08
     self.coyote_time_counter = 0
     self.jump_buffer_time = 0.02
     self.jump_buffer_time_counter = 0
@@ -320,6 +320,7 @@ function Player:update(dt)
     --     print(shadow[3])
     -- end
     -- print(unpack(self.shadow.floor_buffer))
+
     --print(self.on_ground, self.dz)
 
     -- Jump (coyote time + jump buffer)
@@ -359,7 +360,10 @@ function Player:update(dt)
     if self.bottom <= self.bottom_floor then
         self.on_ground = true
         self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
-    elseif self.top >= self.top_floor then
+    else
+        self.on_ground = false
+    end
+    if self.top >= self.top_floor then        
         self.userData.position[3] = self.top_floor - self.depth/2 - 0.01
     end
 
@@ -486,16 +490,17 @@ function Player:updateShadow()
     local bottom_buffer = {}
     for i=#self.shadow.floor_buffer,1,-1 do
         -- read the buffer from top to bottom
-        local coll_top = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
+        local coll_top, coll_center = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
         local coll_bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
-
-        if coll_bottom > self.top then
-            table.insert(bottom_buffer, coll_bottom)
-        else
-            self.bottom_floor = coll_top
-            --print(self.bottom_floor)
-            self.top_floor = bottom_buffer[#bottom_buffer] or 1000
-            break
+        if coll_center == true then
+            if coll_bottom > self.top then
+                table.insert(bottom_buffer, coll_bottom)
+            else
+                self.bottom_floor = coll_top
+                --print(self.bottom_floor)
+                self.top_floor = bottom_buffer[#bottom_buffer] or 1000
+                break
+            end
         end
     end
 end

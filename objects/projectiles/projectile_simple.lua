@@ -9,12 +9,12 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
 
     self.target = target
 
-    --Position of the 3D cylinder center
-    
-
     self.angle = ini_angle
 
-    self.depth = 10
+    self.depth = 4
+
+    self.top_floor = 1000
+    self.bottom_floor = -1000
 
     self.userData = {
         id = "projectile",
@@ -27,10 +27,18 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.top = self.userData.position[3] + self.depth/2
     self.bottom = self.userData.position[3] - self.depth/2
 
+    self.top_function = function(x, y)
+        return self.top, true
+    end
+
+    self.bottom_function = function(x, y)
+        return self.bottom
+    end
+
     -- Set projectile type
     self.radius = 4
     self.speed = 100
-    self.z_offset = 3 + self.depth/2
+    self.z_offset = 6 + self.depth/2
 
     self.timer = 0
     self.max_timer = 16 - 0.0002*self.speed*self.speed --120 speed = 13 (MAX = 280)
@@ -38,8 +46,8 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
 
     self.active = true
 
-    --local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
-    --self.model = g3d.newModel("assets/3d/unit_cylinder.obj", "assets/3d/no_texture.png", {0,0,0}, {0,0,0}, scale)
+    local scale = {self.radius*2/SCALE3D.x, self.radius*2/SCALE3D.x, self.depth/SCALE3D.z}
+    self.model = g3d.newModel(GAME.models_directory.."/unit_cylinder.obj", GAME.models_directory.."/no_texture.png", {0,0,0}, {0,0,0}, scale)
 
     --Physics
     self.body = love.physics.newBody(current_map.WORLD,  self.userData.position[1], self.userData.position[2], "dynamic")
@@ -67,15 +75,13 @@ local function newProjectile(x, y, z, entity_dx, entity_dy, ini_angle, options)
     self.fixture_flat:setCategory(6)
     self.hit_set = {nil, nil, true, true}
 
-
     self.fixture_flat:setSensor(true)
 
-    self:setHeight2()
+    self:setHeight()
 
     self.fixture:setMask(1,2,3,4,5,6,7,8,9)
     self.fixture:setUserData(self)
 
-    self.fixture_flat:setMask(1,2,3,4,5,7,8,9)
     self.fixture_flat:setUserData(self)
 
     --self:setVelocity(self.speed, self.angle)
@@ -115,7 +121,7 @@ function Projectile:update(dt)
         self.active = false
     end
 
-    self:setHeight2()
+    self:setHeight()
 
     -- Instanced Mesh update
     self.position = {self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z}
@@ -125,7 +131,9 @@ function Projectile:update(dt)
 
     --Shadow
     self.shadow:updatePosition(self.userData.position[1], self.userData.position[2], self.userData.position[3])
-    --self.model:setTranslation(self.x/SCALE3D.x, self.y/SCALE3D.y, self.z/SCALE3D.z)
+    self:updateShadow()
+
+    self.model:setTranslation(self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z)
 
     if self.active == false then
         self:destroyMe()
@@ -145,7 +153,7 @@ function Projectile:draw(shader, camera, shadow_map)
     if shadow_map == true then
         --self.shadow:draw(shader, camera, shadow_map)
     else
-        --self.model:draw(shader, camera, shadow_map)
+        self.model:draw(shader, camera, shadow_map)
     end
 end
 
@@ -156,48 +164,16 @@ function Projectile:destroyMe()
     last_obj.index = self.index
 
     table.insert(current_map.DELETEQUEUE, {group = "Projectile", index = last_index})
-
     self.body:destroy()
 end
 
-function Projectile:setHeight2()
+function Projectile:setHeight()
     self.top = self.userData.position[3] + self.depth/2
     self.bottom = self.userData.position[3] - self.depth/2
 end
 
-function Projectile:setHeight()
-    local mask = {11,12,13,14,15,16}
-
-    for i, coll_cat in ipairs(mask) do
-        local overlap = math.min(self.top, (i)*SCALE3D.z) - math.max(self.bottom, (i-1)*SCALE3D.z)
-        if overlap >= 0 then
-            -- the player overlaps the floor range, either from the bottom (or top)
-            table.remove(mask, i)
-            if overlap == self.depth then
-                -- the overlap is the whole player's depth
-                break
-            else
-                -- remove the next floor on top (which now is at index i, not i+1)
-                table.remove(mask, i)
-                break
-            end
-        end
-    end
-
-    -- category 1 are shadows
-    self.fixture:setMask(1,3,4,5,6,7,8,9, unpack(mask))
-    self.fixture:setUserData(self)
-
-    self.fixture_flat:setMask(1,2,3,4,5,7,8,9, unpack(mask))
-    self.fixture_flat:setUserData(self)
-end
-
 function Projectile:gotHit(entity, xn, yn)
     --print("Projectile got hit: ", entity.fixture:getCategory())
-    local overlap = math.min(self.top, entity.top) - math.max(self.bottom, entity.bottom)
-    if overlap >= 0 then
-        self.active = false
-    end
 end
 function Projectile:exitHit(entity, xn, yn)
     --print("Projectile exited a collision")
@@ -217,6 +193,25 @@ function Projectile:hitboxGotHit(entity)
 end
 function Projectile:hitboxExitHit(entity)
     --print("Projectile Hitbox exited a collision")
+end
+
+function Projectile:updateShadow()
+    local bottom_buffer = {}
+    for i=#self.shadow.floor_buffer,1,-1 do
+        -- read the buffer from top to bottom
+        local coll_top, coll_center = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
+        local coll_bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
+        if coll_center == true then
+            if coll_bottom > self.top then
+                table.insert(bottom_buffer, coll_bottom)
+            else
+                self.bottom_floor = coll_top
+                --print(self.bottom_floor)
+                self.top_floor = bottom_buffer[#bottom_buffer] or 1000
+                break
+            end
+        end
+    end
 end
 
 return newProjectile

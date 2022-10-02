@@ -122,6 +122,14 @@ function Scene_1:draw()
 
     current_section.projectile_imesh:draw(billboardShader, current_camera, false)
 
+    for i, projectile in ipairs(current_section.projectiles) do
+        if projectile == "empty" then
+            break
+        else
+            projectile:draw(myShader, current_camera, false)
+        end
+    end
+
     current_section.particle_imesh:draw(billboardShader, current_camera, false)
 
     --shadow_imesh:draw(billboardShader, current_camera, false)

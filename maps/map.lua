@@ -167,6 +167,7 @@ function Map:update(dt)
         if delete["group"] == "Projectile" then
             current_section.projectiles[delete["index"]] = "empty"
         elseif delete["group"] == "Enemy" then
+            current_section.enemies[delete["index"]].body:destroy()
             table.remove(current_section.enemies, delete["index"])
         elseif delete["group"] == "Particle" then
             current_section.particles[delete["index"]] = "empty"
@@ -192,6 +193,7 @@ function beginContact(a, b, contact)
         user_b:gotHit(user_a)
     end
     --print(a:getUserData().." colliding with "..b:getUserData().."\n")
+
 end
 
 function endContact(a, b, contact)
@@ -204,18 +206,20 @@ end
 
 function preSolve(a, b, contact)
     local user_a, user_b = a:getUserData(), b:getUserData()
-    local cate_a, cate_b = a:getCategory() b:getCategory()
-        if cate_a ~= 6 and cate_b ~= 6 then
+    local cate_a, cate_b = a:getCategory(), b:getCategory()
+    if cate_a ~= 6 and cate_b ~= 6 then
         local overlap = math.min(user_a.top, user_b.top) - math.max(user_a.bottom, user_b.bottom)
         if overlap <= 0 then
             -- The prisms are NOT overlapping in the z axis, so collision must not occur
             contact:setEnabled(false)
         else
-            -- Dealing with collisions
+            -- Dealing with collision meshes
             if cate_a == 10 or cate_a == 11 then
-                contact:setEnabled(user_a.top_function(user_b.userData.position[1], user_b.userData.position[2]) >= user_b.bottom + 4)
+                local coll_top, coll_center = user_a.top_function(user_b.userData.position[1], user_b.userData.position[2])
+                contact:setEnabled(coll_top >= user_b.bottom + 4)
             elseif cate_b == 10 or cate_b == 11 then
-                contact:setEnabled(user_b.top_function(user_a.userData.position[1], user_a.userData.position[2]) >= user_a.bottom + 4)
+                local coll_top, coll_center = user_b.top_function(user_a.userData.position[1], user_a.userData.position[2])
+                contact:setEnabled(coll_top >= user_a.bottom + 4)
             end
         end
     end

@@ -15,7 +15,6 @@ local function newRamp(ramp_type, x, y, z, width, height, depth, model)
     self.depth = depth or 60
 
     if ramp_type == "Diagonal_Ramp" or ramp_type == "Diagonal_Ramp_Inner" then
-        self.diagonal = math.sqrt(math.pow(width, 2) + math.pow(height, 2))
         self.normal = {normalizeVector_3D(crossProduct_3D(width,0,depth, -width,height,0))}
     end
 
@@ -60,24 +59,22 @@ local function newRamp(ramp_type, x, y, z, width, height, depth, model)
         end
     end
 
+    -- Top Functions -----------------------------------------------------------------------
 
     if closeNumber(z_rotation, 0, 0.1) or closeNumber(z_rotation, math.pi, 0.1) then
         if ramp_type == "Regular_Ramp" then
             self.top_function = function(x, y)
                 local rel_x = self.rel_x(x)
                 local intersect = rel_x*self.depth/self.width
-                return clamp(self.origin_z + intersect, self.bottom, self.top)
+                return clamp(self.origin_z + intersect, self.bottom, self.top), true
             end
         end
-    end
-
-    
-    if closeNumber(z_rotation, 0.5*math.pi, 0.1) or closeNumber(z_rotation, 1.5*math.pi, 0.1) then
+    elseif closeNumber(z_rotation, 0.5*math.pi, 0.1) or closeNumber(z_rotation, 1.5*math.pi, 0.1) then
         if ramp_type == "Regular_Ramp" then
             self.top_function = function(x, y)
                 local rel_y = self.rel_y(y)
                 local intersect = rel_y*self.depth/self.width
-                return clamp(self.origin_z + intersect, self.bottom, self.top)
+                return clamp(self.origin_z + intersect, self.bottom, self.top), true
             end
         end
     end
@@ -87,14 +84,14 @@ local function newRamp(ramp_type, x, y, z, width, height, depth, model)
             local rel_x = self.rel_x(x)
             local rel_y = self.rel_y(y)
             local intersect = (self.normal[1]*self.width*SCALE3D.x - self.normal[1]*rel_x - self.normal[2]*rel_y)/self.normal[3]
-            return clamp(self.origin_z + intersect, self.bottom, self.top)
+            return clamp(self.origin_z + intersect, self.bottom, self.top), self.fixture:testPoint(x, y)
         end
     elseif ramp_type == "Diagonal_Ramp_Inner" then
         self.top_function = function(x, y)
             local rel_x = self.rel_x(x)
             local rel_y = self.rel_y(y)
             local intersect = (self.normal[1]*self.width*SCALE3D.x - self.normal[1]*rel_x - self.normal[2]*rel_y)/self.normal[3]
-            return clamp(self.origin_z + intersect + self.depth*SCALE3D.x, self.bottom, self.top)
+            return clamp(self.origin_z + intersect + self.depth*SCALE3D.x, self.bottom, self.top), self.fixture:testPoint(x, y)
         end
     end
 

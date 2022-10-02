@@ -436,7 +436,10 @@ function Enemy:update(dt)
     if self.bottom <= self.bottom_floor then
         self.on_ground = true
         self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
-    elseif self.top >= self.top_floor then
+    else
+        self.on_ground = false
+    end
+    if self.top >= self.top_floor then        
         self.userData.position[3] = self.top_floor - self.depth/2 - 0.01
     end
 
@@ -547,8 +550,7 @@ function Enemy:screenDrawUI()
 end
 
 function Enemy:destroyMe()
-    table.insert(current_map.DELETEQUEUE, {group = "Enemy", index = getIndex(current_scene.enemies, self)})
-    self.body:destroy()
+    table.insert(current_map.DELETEQUEUE, {group = "Enemy", index = getIndex(current_section.enemies, self)})
 end
 
 function Enemy:setAnimation(name, angle, flip_x, flip_y)
@@ -630,14 +632,17 @@ function Enemy:updateShadow()
     local bottom_buffer = {}
     for i=#self.shadow.floor_buffer,1,-1 do
         -- read the buffer from top to bottom
-        local floor = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
-        local bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
-        if floor <= self.bottom then
-            self.bottom_floor = floor
-            self.top_floor = bottom_buffer[#bottom_buffer] or 1000
-            break
-        elseif bottom >= self.top then
-            table.insert(bottom_buffer, bottom)
+        local coll_top, coll_center = self.shadow.floor_buffer[i][2](self.userData.position[1], self.userData.position[2])
+        local coll_bottom = self.shadow.floor_buffer[i][3](self.userData.position[1], self.userData.position[2])
+        if coll_center == true then
+            if coll_bottom > self.top then
+                table.insert(bottom_buffer, coll_bottom)
+            else
+                self.bottom_floor = coll_top
+                --print(self.bottom_floor)
+                self.top_floor = bottom_buffer[#bottom_buffer] or 1000
+                break
+            end
         end
     end
 end

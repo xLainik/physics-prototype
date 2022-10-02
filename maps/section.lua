@@ -80,14 +80,13 @@ function Section:loadSection()
             local dim = getFormatedTable(getTable(words[2], "([^,]+)"))
             local rot = getFormatedTable(getTable(words[3], "([^,]+)"))
             local real_dim = getFormatedTable(getTable(words[2], "([^,]+)"))
-            local texture_path = GAME.models_directory.."/no_texture.png"
+            local texture_path = GAME.models_directory.."/no_texture_2.png"
             -- Spawn a Ramp collision mesh
             local ramp_type = object_name
             local model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_ramp.obj", false, true), texture_path, pos, rot, dim)
             if ramp_type == "Diagonal_Ramp" then
                 model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_ramp_diagonal.obj", false, true), texture_path, pos, rot, dim)
             elseif ramp_type == "Diagonal_Ramp_Inner" then
-                print("fjfoj")
                 model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_ramp_diagonal_inner.obj", false, true), texture_path, pos, rot, dim)
             end
             local shape = current_map.SPAWNFUNCTIONS["Ramp"](ramp_type, pos[1], pos[2], pos[3], real_dim[1], real_dim[2], real_dim[3], model)
@@ -116,6 +115,7 @@ function Section:loadSection()
     -- if self.index == 2 then
     --     table.insert(self.enemies, current_map.SPAWNFUNCTIONS["Enemy_Slime"](180,-120, 100))
     -- end
+
     -- Projectiles
     --Particles
 end

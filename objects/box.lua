@@ -16,7 +16,7 @@ local function newBox(x, y, z, width, height, depth, model)
     self.bottom = (self.z - self.depth/2)*SCALE3D.z
 
     self.top_function = function(x, y)
-        return self.top
+        return self.top, true
     end
 
     self.bottom_function = function(x, y)
