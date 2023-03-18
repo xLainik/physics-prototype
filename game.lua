@@ -65,7 +65,7 @@ function Game:checkInputs()
     end
 
     if love.keyboard.isDown("escape") then
-        love.event.quit()
+        self:exitState()
     end
 end
 
@@ -89,8 +89,9 @@ function Game:exitState()
     if #self.state_stack > 1 then
         self.current_state:onExit()
 
-        table.remove(self.state_stack, self.current_state)
+        table.remove(self.state_stack)
         self.current_state = self.state_stack[#self.state_stack]
+        self.current_state:onEnter()
     end
 end
 

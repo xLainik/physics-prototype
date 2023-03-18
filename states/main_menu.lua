@@ -1,37 +1,38 @@
 local State = require("states/state")
 
-local MainManu = State:new()
+local MainMenu = State:new()
 
-function MainManu:new()
+function MainMenu:new()
    local o = State:new()
    setmetatable(o, self)
    self.__index = self
    return o
 end
 
-function MainManu:onEnter()
+function MainMenu:onEnter()
     love.graphics.setFont(GAME.FONT_LARGE)
 end
 
-function MainManu:onExit()
+function MainMenu:onExit()
     --pass
 end
 
-function MainManu:update(dt)
+function MainMenu:update(dt)
     if GAME.actions["enter"] then
         GAME:enterState("game_world")
     end
 end
 
-function MainManu:draw()
+function MainMenu:draw()
     -- pass
 end
 
-function MainManu:drawUI()
+function MainMenu:drawUI()
     love.graphics.setColor(244/255, 248/255, 255/255)
+    love.graphics.clear()
     local width = GAME.FONT_LARGE:getWidth("Press Enter")
     local height = GAME.FONT_LARGE:getHeight()
     love.graphics.printf("Press Enter", ((SCREENWIDTH-32)/2)*WINDOWSCALE - width/2, ((SCREENHEIGHT-32)/2)*WINDOWSCALE - height/2, 200)
 end
 
-return MainManu
+return MainMenu
