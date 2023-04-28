@@ -24,7 +24,7 @@ local function newPlayer(cursor)
     self.top_floor = 1000
     self.bottom_floor = -1000
     self.on_ground = false
-    self.jump_max_speed = 280
+    self.jump_max_speed = 320
 
     self.dz = -8
     self.z_gravity = -8
@@ -398,9 +398,9 @@ function Player:draw(shader, camera, shadow_map)
         self.sprite_1:draw(shader, camera, shadow_map)
         self.sprite_2:draw(shader, camera, shadow_map)
     else
-        --self.sprite_1:draw(shader, camera, shadow_map)
-        --self.sprite_2:draw(shader, camera, shadow_map)
-        self.model:draw(shader, camera, shadow_map)
+        self.sprite_1:draw(shader, camera, shadow_map)
+        self.sprite_2:draw(shader, camera, shadow_map)
+        --self.model:draw(shader, camera, shadow_map)
     end
     
 end

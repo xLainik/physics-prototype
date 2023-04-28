@@ -20,8 +20,8 @@ function love.conf(t)
     --t.window.minwidth = 426
     --t.window.minheight = 240
 	t.window.display = 1 
-    t.window.x = 400                    
-    t.window.y = 220
+    t.window.x = 140                    
+    t.window.y = 200
 
     t.modules.touch = false
     t.modules.video = false

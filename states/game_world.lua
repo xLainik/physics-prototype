@@ -87,7 +87,7 @@ function GameWorld:onEnter()
     player_1 = newPlayer(GAME.cursor)
     circle_1 = newCircle()
 
-    player_1:loadData({hp = 100, position = {40, 100, 100}})
+    player_1:loadData({hp = 100, position = {90, 100, 100}})
 
     -- Load Section
     --current_map:enterSection(1)
@@ -96,7 +96,7 @@ function GameWorld:onEnter()
 
     -- Debug collisions and 3d orbiting
     view = {"final_view", "hitbox_debug", "3d_debug"}
-    view_index = 3
+    view_index = 1
     view_timer = 0.1
 
     current_map.enterSection(current_map, 1, nil)

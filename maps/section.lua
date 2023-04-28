@@ -62,6 +62,7 @@ function Section:loadSection()
             local pos = getFormatedTable(getTable(words[1], "([^,]+)"))
             local dim = getFormatedTable(getTable(words[2], "([^,]+)"))
             local real_dim = getFormatedTable(getTable(words[2], "([^,]+)"))
+            local rot = getFormatedTable(getTable(words[3], "([^,]+)"))
             local texture_path = GAME.models_directory.."/no_texture.png"
             if pos[3] < 0 then
                 -- Make Barriers very tall so player can't jumpt over them
@@ -70,8 +71,8 @@ function Section:loadSection()
                 texture_path = GAME.models_directory.."/red_texture.png"
             end
             -- Spawn a Box collision mesh
-            local model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_cube.obj", false, true), texture_path, pos, {0,0,0}, dim)
-            local shape = current_map.SPAWNFUNCTIONS["Box"](pos[1], pos[2], pos[3], real_dim[1], real_dim[2], real_dim[3], model)
+            local model = g3d.newModel(g3d.loadObj(GAME.models_directory.."/unit_cube.obj", false, true), texture_path, pos, rot, dim)
+            local shape = current_map.SPAWNFUNCTIONS["Box"](pos[1], pos[2], pos[3], real_dim[1], real_dim[2], real_dim[3], rot[1], rot[2], rot[3], model)
 
             table.insert(self.collisions, shape)
         elseif object_name == "Regular_Ramp" or object_name == "Diagonal_Ramp" or object_name == "Diagonal_Ramp_Inner" then

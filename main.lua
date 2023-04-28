@@ -15,7 +15,7 @@ function love.load()
 
     GAME = Game:new() 
 
-    GAME:enterState("main_menu")
+    GAME:enterState("game_world")
 
 	FPS = 60
 end

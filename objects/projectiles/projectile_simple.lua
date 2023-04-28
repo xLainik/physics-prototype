@@ -123,6 +123,23 @@ function Projectile:update(dt)
 
     self:setHeight()
 
+    if self.bottom <= self.bottom_floor then
+        --self.userData.position[3] = self.bottom_floor + self.depth/2 + 0.01
+        self.active = false
+    end
+    if self.top >= self.top_floor then
+        --self.userData.position[3] = self.top_floor - self.depth/2 - 0.01
+        self.active = false
+    end
+
+    local x_speed, y_speed = self.body:getLinearVelocity()
+
+    if closeNumber(x_speed, 0, 0.1) or closeNumber(y_speed, 0, 0.1) then
+        self.active = false
+    end
+
+    self:setHeight()
+
     -- Instanced Mesh update
     self.position = {self.userData.position[1]/SCALE3D.x, self.userData.position[2]/SCALE3D.y, self.userData.position[3]/SCALE3D.z}
     self.matrix:setTransformationMatrix(self.position, self.rotation, self.scale)
@@ -151,9 +168,9 @@ end
 
 function Projectile:draw(shader, camera, shadow_map)
     if shadow_map == true then
-        --self.shadow:draw(shader, camera, shadow_map)
+        self.shadow:draw(shader, camera, shadow_map)
     else
-        self.model:draw(shader, camera, shadow_map)
+        --self.model:draw(shader, camera, shadow_map)
     end
 end
 
@@ -174,6 +191,7 @@ end
 
 function Projectile:gotHit(entity, xn, yn)
     --print("Projectile got hit: ", entity.fixture:getCategory())
+    
 end
 function Projectile:exitHit(entity, xn, yn)
     --print("Projectile exited a collision")

@@ -1,13 +1,12 @@
 local Box = {}
 Box.__index = Box
 
-local function newBox(x, y, z, width, height, depth, model)
+local function newBox(x, y, z, width, height, depth, rot_x, rot_y, rot_z, model)
     local self = setmetatable({}, Box)
 
-    -- Position of the xyz center in 3D
-    self.x = x + width/2 or 0
-    self.y = y + height/2 or 0
-    self.z = z + depth/2 or 0
+    -- Position/Scale and rotation of the xyz center in 3D
+    self.x, self.y  = rotatePoint(x,y, x+width/2,y+height/2, rot_z)
+    self.z = z + depth/2
     self.width = width or 60
     self.height = height or 60
     self.depth = depth or 60
@@ -31,6 +30,7 @@ local function newBox(x, y, z, width, height, depth, model)
     self.body = love.physics.newBody(current_map.WORLD, self.x*SCALE3D.x, self.y*SCALE3D.y, "static")
     self.shape = love.physics.newRectangleShape(self.width*SCALE3D.x, self.height*SCALE3D.x)
     self.fixture = love.physics.newFixture(self.body, self.shape)
+    self.body:setAngle(-1*rot_z)
 
     -- Fixture Category and Mask
     self.fixture:setCategory(10)
